@@ -27,6 +27,7 @@ const mapOrder = (o: any): Order => ({
     qrToken: o.qr_token,
     status: o.status as OrderStatusEnum,
     timestamp: new Date(o.created_at),
+    collectedAt: o.collected_at,
     orderType: 'real',
     items: (o.order_items || []).map((oi: any) => ({
         id: oi.menu_item_id,
@@ -44,6 +45,23 @@ const mapOrder = (o: any): Order => ({
 });
 
 // --- ORDER OPERATIONS ---
+
+export const getSalesByDate = async (dateStr: string): Promise<Order[]> => {
+    // dateStr format: YYYY-MM-DD
+    const startOfDay = `${dateStr}T00:00:00.000Z`;
+    const endOfDay = `${dateStr}T23:59:59.999Z`;
+
+    const { data, error } = await supabase
+        .from('orders')
+        .select('*, order_items(*)')
+        .eq('status', OrderStatusEnum.COLLECTED)
+        .gte('collected_at', startOfDay)
+        .lte('collected_at', endOfDay)
+        .order('collected_at', { ascending: false });
+
+    if (error) throw new Error(getErrorMessage(error));
+    return (data || []).map(mapOrder);
+};
 
 export const placeOrder = async (orderData: any): Promise<Order> => {
     const qrToken = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;

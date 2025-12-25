@@ -29,6 +29,7 @@ import RewardsPage from './pages/student/RewardsPage';
 // Canteen Owner pages
 import OwnerLayout from './pages/owner/OwnerLayout';
 import { OwnerDashboard } from './pages/owner/OwnerDashboard';
+import SalesAnalyticsPage from './pages/owner/SalesAnalyticsPage';
 import ScanQrPage from './pages/owner/ScanQrPage';
 import FoodPopularityPage from './pages/owner/FoodPopularityPage';
 import RewardsManagementPage from './pages/owner/RewardsManagementPage';
@@ -36,8 +37,6 @@ import DailySpecialsPage from './pages/owner/DailySpecialsPage';
 import GamesManagementPage from './pages/owner/GamesManagementPage';
 import OwnerFeedbackPage from './pages/owner/FeedbackPage';
 import OffersPage from './pages/owner/OffersPage';
-import ScanApprovalPage from './pages/owner/ScanApprovalPage';
-import ScanOnlyPage from './pages/owner/ScanOnlyPage';
 import ScanTerminalLoginPage from './pages/owner/ScanTerminalLoginPage';
 import ScanTerminalHomePage from './pages/owner/ScanTerminalHomePage';
 
@@ -137,6 +136,7 @@ const AppRoutes = () => {
             }>
                 <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard" element={<OwnerDashboard />} />
+                <Route path="sales" element={<SalesAnalyticsPage />} />
                 <Route path="scan" element={<ScanQrPage />} />
                 <Route path="popularity" element={<FoodPopularityPage />} />
                 <Route path="rewards" element={<RewardsManagementPage />} />
