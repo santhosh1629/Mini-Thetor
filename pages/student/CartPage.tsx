@@ -95,7 +95,8 @@ const CartPage: React.FC = () => {
         try {
             const orderPayload = {
                 studentId: user.id, 
-                studentName: `${customerName} (Screen: ${seatNumber})`,
+                studentName: customerName,
+                customerPhone: phoneNumber,
                 items: cart.map(({ id, name, quantity, price, notes, imageUrl, category, selectedSlotId, durationMinutes, selectedStartTime }) => ({ 
                     id, 
                     name, 

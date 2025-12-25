@@ -190,7 +190,17 @@ const OrdersManager: React.FC<{orders: Order[], onRefresh: () => void, onViewOrd
                                     <td className="px-6 py-4 whitespace-nowrap text-xs font-mono text-gray-500 uppercase">#{order.id.slice(-6)}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm align-top">
                                         <div className="font-bold text-gray-200">{order.studentName}</div>
-                                        {order.seatNumber && <div className="mt-1 text-xs font-black text-amber-400 uppercase tracking-tighter bg-amber-500/10 px-2 py-0.5 rounded inline-block">Location: {order.seatNumber}</div>}
+                                        {order.customerPhone ? (
+                                            <a href={`tel:${order.customerPhone}`} className="flex items-center gap-1 mt-0.5 text-indigo-400 hover:text-indigo-300 font-mono font-medium transition-colors">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                                    <path d="M3.654 1.328a.678.678 0 0 0-1.015-.063L1.605 2.3c-.483.484-.661 1.169-.45 1.77a17.568 17.568 0 0 0 4.168 6.608 17.569 17.569 0 0 0 6.608 4.168c.601.211 1.286.033 1.77-.45l1.034-1.034a.678.678 0 0 0-.063-1.015l-2.307-1.794a.678.678 0 0 0-.58-.122l-2.19.547a1.745 1.745 0 0 1-1.657-.459L5.482 8.062a1.745 1.745 0 0 1-.46-1.657l.548-2.19a.678.678 0 0 0-.122-.58L3.654 1.328zM1.884.511a1.745 1.745 0 0 1 2.612.163L6.29 2.98c.329.423.445.974.315 1.494l-.547 2.19a.678.678 0 0 0 .178.643l2.457 2.457a.678.678 0 0 0 .644.178l2.189-.547a1.745 1.745 0 0 1 1.494.315l2.306 1.794c.829.645.905 1.87.163 2.611l-1.034 1.034c-.74.74-1.846 1.065-2.877.702a18.634 18.634 0 0 1-7.01-4.42 18.634 18.634 0 0 1-4.42-7.009c-.362-1.03-.037-2.137.703-2.877L1.885.511z"/>
+                                                </svg>
+                                                {order.customerPhone}
+                                            </a>
+                                        ) : (
+                                            <div className="text-xs text-gray-500 italic mt-0.5">Phone not available</div>
+                                        )}
+                                        {order.seatNumber && <div className="mt-2 text-xs font-black text-amber-400 uppercase tracking-tighter bg-amber-500/10 px-2 py-0.5 rounded inline-block">Location: {order.seatNumber}</div>}
                                     </td>
                                     <td className="px-6 py-4 whitespace-normal text-sm text-gray-400 align-top">
                                         <ul className="space-y-1">
@@ -471,7 +481,13 @@ export const OwnerDashboard: React.FC = () => {
                             <div className="bg-white/5 p-4 rounded-xl">
                                 <p className="text-[10px] uppercase font-bold text-gray-500 mb-1">Customer</p>
                                 <p className="font-bold text-lg text-white">{viewingOrder.studentName}</p>
-                                {viewingOrder.customerPhone && <p className="text-sm text-indigo-400">{viewingOrder.customerPhone}</p>}
+                                {viewingOrder.customerPhone ? (
+                                    <a href={`tel:${viewingOrder.customerPhone}`} className="text-sm text-indigo-400 hover:underline flex items-center gap-2 mt-1">
+                                        📞 {viewingOrder.customerPhone}
+                                    </a>
+                                ) : (
+                                    <p className="text-sm text-gray-500 italic mt-1">Phone not available</p>
+                                )}
                             </div>
                             <div className="bg-white/5 p-4 rounded-xl">
                                 <p className="text-[10px] uppercase font-bold text-gray-500 mb-2">Cart Contents</p>
@@ -483,7 +499,7 @@ export const OwnerDashboard: React.FC = () => {
                                         </li>
                                     ))}
                                 </ul>
-                                <div className="mt-4 pt-2 flex justify-between font-black text-white uppercase border-t border-white/10 pt-4"><span>Total Value</span><span>₹{viewingOrder.totalAmount.toFixed(0)}</span></div>
+                                <div className="mt-4 pt-4 flex justify-between font-black text-white uppercase border-t border-white/10"><span>Total Value</span><span>₹{viewingOrder.totalAmount.toFixed(0)}</span></div>
                             </div>
                         </div>
                     </div>

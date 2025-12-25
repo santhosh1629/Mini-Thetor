@@ -53,9 +53,9 @@ export const placeOrder = async (orderData: any): Promise<Order> => {
         .insert([{
             student_id: orderData.studentId,
             student_name: orderData.studentName,
-            customer_phone: orderData.customerPhone || '',
-            seat_number: orderData.seatNumber || '',
-            total_amount: Number(orderData.totalAmount || 0),
+            customer_phone: orderData.customerPhone || orderData.customer_phone || '',
+            seat_number: orderData.seat_number || orderData.seatNumber || '',
+            total_amount: Number(orderData.total_amount || orderData.totalAmount || 0),
             qr_token: qrToken,
             status: OrderStatusEnum.PENDING
         }])
@@ -71,9 +71,9 @@ export const placeOrder = async (orderData: any): Promise<Order> => {
         quantity: item.quantity,
         price: item.price,
         notes: item.notes || null,
-        selected_slot_id: item.selectedSlotId || null,
-        selected_start_time: item.selectedStartTime || null,
-        duration_minutes: item.durationMinutes || 60,
+        selected_slot_id: item.selectedSlotId || item.selected_slot_id || null,
+        selected_start_time: item.selectedStartTime || item.selected_start_time || null,
+        duration_minutes: item.durationMinutes || item.duration_minutes || 60,
         category: normalizeCategory(item.category),
         is_delivered: false,
         delivered_quantity: 0
@@ -155,7 +155,8 @@ export const getMenu = async (studentId?: string): Promise<MenuItem[]> => {
             comboItems: item.combo_items, 
             slotIds: item.slot_ids, 
             durationMinutes: item.duration_minutes, 
-            averageRating: Number(item.average_rating) || 0, 
+            averageRating: Number(item.average_rating) || 0,
+            favoriteCount: item.favorite_count || 0,
             isAvailable: item.is_available ?? true, 
             category: normalizeCategory(item.category) 
         })); 
@@ -182,7 +183,8 @@ export const getMenuItemById = async (itemId: string, studentId?: string): Promi
             comboItems: data.combo_items, 
             slotIds: data.slot_ids, 
             durationMinutes: data.duration_minutes, 
-            averageRating: Number(data.average_rating) || 0, 
+            averageRating: Number(data.average_rating) || 0,
+            favoriteCount: data.favorite_count || 0,
             category: normalizeCategory(data.category) 
         }; 
         if (studentId) { 
@@ -213,7 +215,7 @@ export const removeMenuItem = async (id: string) => {
 };
 
 export const updateMenuAvailability = async (id: string, isAvailable: boolean) => { 
-    const { error } = await supabase.from('menu_items').update({ is_available: isAvailable }).eq('id', id); 
+    const { error = null } = await supabase.from('menu_items').update({ is_available: isAvailable }).eq('id', id); 
     if (error) throw new Error(getErrorMessage(error)); 
 };
 
