@@ -1,0 +1,7 @@
+{
+  "name": "MINI THETOR final ",
+  "description": "MINI THETOR",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
