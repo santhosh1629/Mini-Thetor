@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import type { Order, SalesSummary, StudentPoints, TodaysDashboardStats, User } from '../../types';
-import { OrderStatus } from '../../types';
+import type { Order, SalesSummary, StudentPoints, TodaysDashboardStats, User, StaffRoleType } from '../../types';
+import { OrderStatus, Role } from '../../types';
 import { 
     getOwnerOrders, updateOrderStatus, getSalesSummary, 
     getMostSellingItems, getOrderStatusSummary, getStudentPointsList, getTodaysDashboardStats, getTodaysDetailedReport,
-    getScanTerminalStaff, simulateIncomingOrder
+    getScanTerminalStaff, addStaffMember, updateStaffMember, deleteStaffMember
 } from '../../services/mockApi';
 import { useAuth } from '../../context/AuthContext';
 
@@ -141,7 +141,6 @@ const OrdersManager: React.FC<{orders: Order[], onRefresh: () => void, onViewOrd
         } catch (error) { console.error("Failed to update status:", error); }
     };
     
-    // STRICT RULE: EXCLUDE COLLECTED AND CANCELLED - they belong strictly to history
     const activeOrders = useMemo(() => 
         orders
             .filter(o => o.status !== OrderStatus.COLLECTED && o.status !== OrderStatus.COMPLETED && o.status !== OrderStatus.CANCELLED)
@@ -196,7 +195,7 @@ const OrdersManager: React.FC<{orders: Order[], onRefresh: () => void, onViewOrd
                                     <td className="px-6 py-4 whitespace-normal text-sm text-gray-400 align-top">
                                         <ul className="space-y-1">
                                             {order.items.map(i => (
-                                                <li key={i.id + (i.selectedSlotId || '')} className="flex items-center gap-2">
+                                                <li key={i.id + (i.selected_slot_id || '')} className="flex items-center gap-2">
                                                     <span className={i.isDelivered ? 'line-through opacity-50' : 'font-semibold text-white'}>{i.name} x{i.quantity}</span>
                                                     {i.isDelivered && <span className="text-[10px] text-green-500 font-bold uppercase">Served</span>}
                                                 </li>
@@ -221,6 +220,152 @@ const OrdersManager: React.FC<{orders: Order[], onRefresh: () => void, onViewOrd
                     </table>
                 </div>
             ) : <div className="text-center py-12"><p className="text-gray-500 italic">No active orders pending collection.</p></div>}
+        </div>
+    );
+};
+
+// --- STAFF MANAGER COMPONENT ---
+
+const StaffManager: React.FC<{ staff: User[], onRefresh: () => void }> = ({ staff, onRefresh }) => {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingStaff, setEditingStaff] = useState<User | null>(null);
+    const [formData, setFormData] = useState({
+        name: '',
+        phone: '',
+        role: 'qr_scanner' as StaffRoleType,
+        password: '',
+        isActive: true
+    });
+
+    const openModal = (member?: User) => {
+        if (member) {
+            setEditingStaff(member);
+            setFormData({
+                name: member.username,
+                phone: member.phone || '',
+                role: member.staffRole || 'qr_scanner',
+                password: member.password || '',
+                isActive: member.isActiveProfile ?? true
+            });
+        } else {
+            setEditingStaff(null);
+            setFormData({
+                name: '',
+                phone: '',
+                role: 'qr_scanner',
+                password: '',
+                isActive: true
+            });
+        }
+        setIsModalOpen(true);
+    };
+
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            if (editingStaff) {
+                await updateStaffMember(editingStaff.id, formData);
+            } else {
+                await addStaffMember(formData);
+            }
+            setIsModalOpen(false);
+            onRefresh();
+            window.dispatchEvent(new CustomEvent('show-owner-toast', { detail: { message: `Staff ${editingStaff ? 'updated' : 'added'}!` } }));
+        } catch (err) {
+            alert((err as Error).message);
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('Are you sure you want to remove this staff member?')) return;
+        try {
+            await deleteStaffMember(id);
+            onRefresh();
+        } catch (err) {
+            alert((err as Error).message);
+        }
+    };
+
+    return (
+        <div className="bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700 animate-fade-in">
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-200">Staff Management 👥</h2>
+                <button onClick={() => openModal()} className="bg-indigo-600 text-white font-black py-2 px-4 rounded-full text-xs uppercase tracking-widest hover:bg-indigo-500 transition-all">
+                    + Add Staff
+                </button>
+            </div>
+
+            <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-700">
+                    <thead className="bg-gray-700/50">
+                        <tr>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Name</th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Role</th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Login ID</th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Status</th>
+                            <th className="px-6 py-3 text-right text-xs font-bold text-gray-400 uppercase tracking-widest">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-700">
+                        {staff.map(member => (
+                            <tr key={member.id} className="hover:bg-white/5">
+                                <td className="px-6 py-4 whitespace-nowrap font-bold text-gray-200">{member.username}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400 uppercase tracking-tight">{member.staffRole?.replace('_', ' ')}</td>
+                                <td className="px-6 py-4 whitespace-nowrap font-mono text-xs text-indigo-400">{member.phone}</td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${member.isActiveProfile ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                                        {member.isActiveProfile ? 'Active' : 'Inactive'}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-right text-xs font-bold space-x-3">
+                                    <button onClick={() => openModal(member)} className="text-gray-400 hover:text-white uppercase tracking-tighter">Edit</button>
+                                    <button onClick={() => handleDelete(member.id)} className="text-red-500 hover:text-red-400 uppercase tracking-tighter">Remove</button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4">
+                    <div className="bg-gray-900 border border-white/10 p-8 rounded-3xl w-full max-w-md shadow-2xl animate-pop-in">
+                        <h2 className="text-xl font-black text-white uppercase mb-6">{editingStaff ? 'Edit Staff' : 'Add New Staff'}</h2>
+                        <form onSubmit={handleSave} className="space-y-4">
+                            <div>
+                                <label className="block text-[10px] font-black text-gray-500 uppercase mb-1">Full Name</label>
+                                <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:border-indigo-500 outline-none" required />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black text-gray-500 uppercase mb-1">Login Mobile Number</label>
+                                <input type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:border-indigo-500 outline-none" required />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black text-gray-500 uppercase mb-1">Staff Role</label>
+                                <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value as StaffRoleType})} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:border-indigo-500 outline-none appearance-none">
+                                    <option value="manager" className="bg-gray-900">Manager</option>
+                                    <option value="qr_scanner" className="bg-gray-900">QR Scanner</option>
+                                    <option value="counter" className="bg-gray-900">Counter</option>
+                                    <option value="delivery" className="bg-gray-900">Delivery</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black text-gray-500 uppercase mb-1">Account Password</label>
+                                <input type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:border-indigo-500 outline-none" required />
+                            </div>
+                            <div className="flex items-center gap-2 pt-2">
+                                <input type="checkbox" id="is_active" checked={formData.isActive} onChange={e => setFormData({...formData, isActive: e.target.checked})} className="w-5 h-5 rounded-lg accent-indigo-600" />
+                                <label htmlFor="is_active" className="text-sm font-bold text-gray-300">Staff Account is Active</label>
+                            </div>
+                            
+                            <div className="flex gap-4 pt-6">
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 text-gray-500 font-black uppercase text-[10px] tracking-widest hover:text-white">Cancel</button>
+                                <button type="submit" className="flex-1 bg-indigo-600 text-white font-black py-3 rounded-xl uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-600/30">Save Member</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -275,7 +420,7 @@ const OrderHistoryView: React.FC<{ orders: Order[] }> = ({ orders }) => {
 };
 
 export const OwnerDashboard: React.FC = () => {
-    const { user, registerStaffUser } = useAuth();
+    const { user } = useAuth();
     const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
     const [activeTab, setActiveTab] = useState<DashboardTab>('live');
 
@@ -352,10 +497,12 @@ export const OwnerDashboard: React.FC = () => {
                     <DailyStats stats={todaysStats} />
                     <div className="bg-gray-800/50 backdrop-blur-md border border-gray-700 p-2 rounded-full flex flex-wrap gap-2 mb-6 sticky top-20 z-10 w-fit">
                         <TabButton tab="live" label="Live Queue" />
+                        <TabButton tab="staff" label="Staff" />
                         <TabButton tab="history" label="Collected History" />
                         <TabButton tab="analytics" label="Analytics" />
                     </div>
                     {activeTab === 'live' && <div className="animate-fade-in-up"><OrdersManager orders={orders} onRefresh={() => fetchData(true)} onViewOrder={setViewingOrder} isRefreshing={isRefreshing} /></div>}
+                    {activeTab === 'staff' && <div className="animate-fade-in-up"><StaffManager staff={staff} onRefresh={() => fetchData(true)} /></div>}
                     {activeTab === 'history' && <div className="animate-fade-in-up"><OrderHistoryView orders={orders} /></div>}
                     {activeTab === 'analytics' && <div className="animate-fade-in-up"><AnalyticsView salesSummary={salesSummary} mostSellingItems={mostSellingItems} orderStatusSummary={orderStatusSummary} /></div>}
                 </>

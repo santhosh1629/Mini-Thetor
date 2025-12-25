@@ -4,6 +4,8 @@ export enum Role {
   ADMIN = 'ADMIN',
 }
 
+export type StaffRoleType = 'counter' | 'delivery' | 'qr_scanner' | 'manager';
+
 export interface User {
   id: string;
   username: string;
@@ -20,6 +22,8 @@ export interface User {
   canteenName?: string;
   idProofUrl?: string;
   loyaltyPoints?: number;
+  staffRole?: StaffRoleType;
+  isActiveProfile?: boolean;
 }
 
 export type DietaryTag = 'vegetarian' | 'vegan' | 'gluten-free';

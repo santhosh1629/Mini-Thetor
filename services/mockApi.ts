@@ -35,9 +35,9 @@ const mapOrder = (o: any): Order => ({
         price: Number(oi.price || 0),
         notes: oi.notes,
         category: normalizeCategory(oi.category),
-        selectedSlotId: oi.selected_slot_id,
-        selectedStartTime: oi.selected_start_time,
-        durationMinutes: oi.duration_minutes,
+        selected_slot_id: oi.selected_slot_id,
+        selected_start_time: oi.selected_start_time,
+        duration_minutes: oi.duration_minutes,
         isDelivered: oi.is_delivered ?? false,
         deliveredQuantity: oi.delivered_quantity ?? 0
     }))
@@ -48,7 +48,6 @@ const mapOrder = (o: any): Order => ({
 export const placeOrder = async (orderData: any): Promise<Order> => {
     const qrToken = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
     
-    // FIX: Map frontend totalAmount to DB total_amount explicitly
     const { data: order, error: orderErr } = await supabase
         .from('orders')
         .insert([{
@@ -56,7 +55,7 @@ export const placeOrder = async (orderData: any): Promise<Order> => {
             student_name: orderData.studentName,
             customer_phone: orderData.customerPhone || '',
             seat_number: orderData.seatNumber || '',
-            total_amount: Number(orderData.totalAmount || 0), // Use total_amount (snake_case)
+            total_amount: Number(orderData.totalAmount || 0),
             qr_token: qrToken,
             status: OrderStatusEnum.PENDING
         }])
@@ -101,7 +100,6 @@ export const verifyQrCode = async (token: string): Promise<Order> => {
 };
 
 export const updatePartialDelivery = async (orderId: string, itemIds: string[], staffId: string): Promise<Order> => {
-    // 1. Mark selected items as delivered
     const { error: itemsErr } = await supabase
         .from('order_items')
         .update({ is_delivered: true })
@@ -110,7 +108,6 @@ export const updatePartialDelivery = async (orderId: string, itemIds: string[], 
 
     if (itemsErr) throw new Error(`Delivery update failed: ${getErrorMessage(itemsErr)}`);
 
-    // 2. Re-fetch all items to check if order is fully served
     const { data: allItems, error: fetchErr } = await supabase
         .from('order_items')
         .select('is_delivered')
@@ -119,8 +116,6 @@ export const updatePartialDelivery = async (orderId: string, itemIds: string[], 
     if (fetchErr) throw fetchErr;
 
     const allDelivered = (allItems || []).every(i => i.is_delivered);
-    
-    // 3. AUTO-TERMINAL LOGIC: Move to COLLECTED if everything is served
     const newStatus = allDelivered ? OrderStatusEnum.COLLECTED : OrderStatusEnum.PARTIALLY_COLLECTED;
 
     const { data: updatedOrder, error: orderErr } = await supabase
@@ -142,8 +137,6 @@ export const updatePartialDelivery = async (orderId: string, itemIds: string[], 
 export const verifyQrCodeAndCollectOrder = async (token: string, staffId: string): Promise<Order> => { 
     const order = await verifyQrCode(token); 
     if (order.status === OrderStatusEnum.COLLECTED) throw new Error("This order is already fully collected."); 
-    
-    // Quick collect serves everything
     const itemIds = order.items.map(i => i.id);
     return await updatePartialDelivery(order.id, itemIds, staffId);
 };
@@ -222,6 +215,68 @@ export const removeMenuItem = async (id: string) => {
 export const updateMenuAvailability = async (id: string, isAvailable: boolean) => { 
     const { error } = await supabase.from('menu_items').update({ is_available: isAvailable }).eq('id', id); 
     if (error) throw new Error(getErrorMessage(error)); 
+};
+
+// --- STAFF MANAGEMENT ---
+
+export const getScanTerminalStaff = async (): Promise<User[]> => { 
+    try { 
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('role', Role.CANTEEN_OWNER)
+            .is('canteen_name', null)
+            .order('username');
+            
+        if (error) throw error; 
+        return (data || []).map(p => ({ 
+            ...p, 
+            approvalStatus: p.approval_status,
+            staffRole: p.staff_role,
+            isActiveProfile: p.is_active_profile
+        })) as User[]; 
+    } catch { return []; } 
+};
+
+export const addStaffMember = async (staffData: any) => {
+    const newId = crypto.randomUUID();
+    const { data, error } = await supabase
+        .from('profiles')
+        .insert([{
+            id: newId,
+            username: staffData.name,
+            phone: staffData.phone,
+            password: staffData.password,
+            role: Role.CANTEEN_OWNER,
+            staff_role: staffData.role,
+            is_active_profile: staffData.isActive,
+            approval_status: 'approved' // Staff is auto-approved by owner
+        }])
+        .select()
+        .single();
+
+    if (error) throw new Error(getErrorMessage(error));
+    return data;
+};
+
+export const updateStaffMember = async (id: string, staffData: any) => {
+    const { error } = await supabase
+        .from('profiles')
+        .update({
+            username: staffData.name,
+            phone: staffData.phone,
+            password: staffData.password,
+            staff_role: staffData.role,
+            is_active_profile: staffData.isActive
+        })
+        .eq('id', id);
+
+    if (error) throw new Error(getErrorMessage(error));
+};
+
+export const deleteStaffMember = async (id: string) => {
+    const { error } = await supabase.from('profiles').delete().eq('id', id);
+    if (error) throw new Error(getErrorMessage(error));
 };
 
 // --- MISC ---
@@ -483,14 +538,6 @@ export const getAllStudentCoupons = async (id: string) => {
         const { data, error } = await supabase.from('offers').select('*').eq('student_id', id); 
         if (error) return []; 
         return data as Offer[]; 
-    } catch { return []; } 
-};
-
-export const getScanTerminalStaff = async () => { 
-    try { 
-        const { data, error } = await supabase.from('profiles').select('*').eq('role', Role.CANTEEN_OWNER).is('canteen_name', null); 
-        if (error) return []; 
-        return (data || []).map(p => ({ ...p, approvalStatus: p.approval_status })) as User[]; 
     } catch { return []; } 
 };
 
