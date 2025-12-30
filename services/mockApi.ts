@@ -47,7 +47,6 @@ const mapOrder = (o: any): Order => ({
 // --- ORDER OPERATIONS ---
 
 export const getSalesByDate = async (dateStr: string): Promise<Order[]> => {
-    // dateStr format: YYYY-MM-DD
     const startOfDay = `${dateStr}T00:00:00.000Z`;
     const endOfDay = `${dateStr}T23:59:59.999Z`;
 
@@ -175,7 +174,7 @@ export const getMenu = async (studentId?: string): Promise<MenuItem[]> => {
             durationMinutes: item.duration_minutes, 
             averageRating: Number(item.average_rating) || 0,
             favoriteCount: item.favorite_count || 0,
-            isAvailable: item.is_available ?? true, 
+            isAvailable: item.is_available ?? true, // DEFAULT ENABLED
             category: normalizeCategory(item.category) 
         })); 
 
@@ -203,6 +202,7 @@ export const getMenuItemById = async (itemId: string, studentId?: string): Promi
             durationMinutes: data.duration_minutes, 
             averageRating: Number(data.average_rating) || 0,
             favoriteCount: data.favorite_count || 0,
+            isAvailable: data.is_available ?? true, // DEFAULT ENABLED
             category: normalizeCategory(data.category) 
         }; 
         if (studentId) { 
@@ -270,7 +270,7 @@ export const addStaffMember = async (staffData: any) => {
             role: Role.CANTEEN_OWNER,
             staff_role: staffData.role,
             is_active_profile: staffData.isActive,
-            approval_status: 'approved' // Staff is auto-approved by owner
+            approval_status: 'approved'
         }])
         .select()
         .single();

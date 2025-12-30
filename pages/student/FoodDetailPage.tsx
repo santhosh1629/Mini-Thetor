@@ -139,8 +139,15 @@ const FoodDetailPage: React.FC = () => {
     }, [itemId, user?.id, navigate]);
 
      const handleAddToCart = useCallback(() => {
-        console.log("ADD TO CART CLICKED");
         if (!item) return;
+
+        // --- MANDATORY SAFETY CHECK ---
+        if (!item.isAvailable) {
+            window.dispatchEvent(new CustomEvent('show-toast', { 
+                detail: { message: '❌ This item is currently out of stock', type: 'cart-warn' } 
+            }));
+            return;
+        }
 
         if (!user) {
             promptForPhone();
@@ -224,6 +231,11 @@ const FoodDetailPage: React.FC = () => {
 
     if (!item) return null;
 
+    // Single source of truth for the button disabled state.
+    // For food, ONLY isAvailable matters.
+    // For screens, isAvailable matters AND slot selection logic.
+    const isActuallyDisabled = !item.isAvailable || (isScreen && (!selectedSlot || isAvailable === false || isChecking));
+
     return (
         <div className="pb-24 animate-fade-in-right relative z-10">
             <div className="flex items-center mb-4">
@@ -240,12 +252,17 @@ const FoodDetailPage: React.FC = () => {
                     <div className="absolute -top-20 -right-20 w-64 h-64 bg-primary/20 rounded-full blur-3xl pointer-events-none"></div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
-                        <div className="rounded-2xl overflow-hidden shadow-lg aspect-video md:aspect-square bg-black/30">
+                        <div className={`rounded-2xl overflow-hidden shadow-lg aspect-video md:aspect-square bg-black/30 ${!item.isAvailable ? 'grayscale opacity-60' : ''}`}>
                             <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"/>
                         </div>
                         
                         <div className="flex flex-col">
-                            <h1 className="text-3xl font-extrabold leading-tight font-heading mb-4">{item.emoji} {item.name}</h1>
+                            <div className="flex justify-between items-start mb-4">
+                                <h1 className="text-3xl font-extrabold leading-tight font-heading">{item.emoji} {item.name}</h1>
+                                {!item.isAvailable && (
+                                    <span className="bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-full animate-pulse uppercase">Out of Stock</span>
+                                )}
+                            </div>
                             
                             {item.averageRating != null && (
                                 <div className="mb-4">
@@ -264,7 +281,7 @@ const FoodDetailPage: React.FC = () => {
                                 )}
                             </div>
                             
-                            {isScreen && item.slotIds && (
+                            {isScreen && item.slotIds && item.isAvailable && (
                                 <div className="mt-6 animate-fade-in-up">
                                     <div className="flex items-center justify-between mb-3">
                                         <h4 className="font-bold text-white uppercase tracking-wider text-xs">Select Slot</h4>
@@ -319,11 +336,14 @@ const FoodDetailPage: React.FC = () => {
                                     type="button"
                                     onClick={handleAddToCart} 
                                     fullWidth 
-                                    className="text-lg py-5 shadow-2xl transition-all active:scale-95 pointer-events-auto relative z-20"
+                                    disabled={isActuallyDisabled}
+                                    className={`text-lg py-5 shadow-2xl transition-all relative z-20 ${isActuallyDisabled ? 'opacity-50 pointer-events-none' : 'active:scale-95 pointer-events-auto'}`}
                                 >
-                                    {isScreen 
-                                        ? (isChecking ? 'Verifying...' : (isAvailable === false ? 'Already Booked' : (selectedSlot ? 'Add screen to Cart' : 'Select a Slot'))) 
-                                        : (item.isAvailable ? 'Add to Cart' : 'Out of Stock')
+                                    {!item.isAvailable 
+                                        ? 'Out of Stock' 
+                                        : isScreen 
+                                            ? (isChecking ? 'Verifying...' : (isAvailable === false ? 'Already Booked' : (selectedSlot ? 'Add screen to Cart' : 'Select a Slot'))) 
+                                            : 'Add to Cart'
                                     }
                                 </Button>
                             </div>

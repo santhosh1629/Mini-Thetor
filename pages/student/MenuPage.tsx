@@ -32,13 +32,20 @@ const MenuItemCard = React.memo(({
     onToggleFavorite: (itemId: string, isFavorited: boolean) => void;
     onAddToCart: (item: MenuItem) => void;
 }) => {
-    const { id, name, price, imageUrl, averageRating, isFavorited, emoji, isCombo } = item;
+    const { id, name, price, imageUrl, averageRating, isFavorited, emoji, isCombo, isAvailable } = item;
     const [isAdding, setIsAdding] = useState(false);
     const [isAnimatingFavorite, setIsAnimatingFavorite] = useState(false);
     const { user, promptForPhone } = useAuth();
 
     const handleAddToCartClick = (e: React.MouseEvent) => {
         e.stopPropagation();
+        
+        // --- MANDATORY SAFETY CHECK ---
+        if (!isAvailable) {
+            window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Item is currently out of stock', type: 'cart-warn' } }));
+            return;
+        }
+
         const action = () => {
             onAddToCart(item);
             setIsAdding(true);
@@ -70,13 +77,19 @@ const MenuItemCard = React.memo(({
     };
     
     return (
-        <div onClick={() => onCardClick(item)} className="bg-surface/50 backdrop-blur-lg border border-surface-light rounded-2xl shadow-lg overflow-hidden transition-all duration-200 hover:shadow-2xl hover:bg-surface-light/30 hover:-translate-y-1 cursor-pointer">
+        <div onClick={() => onCardClick(item)} className={`bg-surface/50 backdrop-blur-lg border border-surface-light rounded-2xl shadow-lg overflow-hidden transition-all duration-200 hover:shadow-2xl hover:bg-surface-light/30 hover:-translate-y-1 cursor-pointer ${!isAvailable ? 'opacity-70' : ''}`}>
             <div className="relative aspect-video overflow-hidden bg-black/20">
-                <img src={imageUrl} alt={name} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 hover:scale-110" />
+                <img src={imageUrl} alt={name} loading="lazy" className={`w-full h-full object-cover transition-transform duration-500 ${isAvailable ? 'hover:scale-110' : 'grayscale-[0.5]'}`} />
                 <div className="absolute top-2 left-2 flex flex-col gap-1">
-                    <span className="text-[10px] font-black px-2.5 py-1 rounded-full text-white shadow-lg bg-green-500 shadow-green-500/20 backdrop-blur-md">
-                        AVAILABLE NOW
-                    </span>
+                    {isAvailable ? (
+                        <span className="text-[10px] font-black px-2.5 py-1 rounded-full text-white shadow-lg bg-green-500 shadow-green-500/20 backdrop-blur-md">
+                            AVAILABLE NOW
+                        </span>
+                    ) : (
+                        <span className="text-[10px] font-black px-2.5 py-1 rounded-full text-white shadow-lg bg-red-600 shadow-red-600/20 backdrop-blur-md animate-pulse">
+                            OUT OF STOCK
+                        </span>
+                    )}
                     {isCombo && <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-primary/90 text-background backdrop-blur-md shadow-sm">COMBO</span>}
                 </div>
                 <button 
@@ -102,8 +115,9 @@ const MenuItemCard = React.memo(({
                         )}
                         <button
                             onClick={handleAddToCartClick}
-                            className={`bg-primary text-background font-black rounded-full p-2.5 shadow-xl shadow-primary/20 transition-all duration-200 hover:scale-110 active:scale-90 ${isAdding ? 'animate-cart-bounce' : ''}`}
-                            aria-label="Add to cart"
+                            disabled={!isAvailable}
+                            className={`${isAvailable ? 'bg-primary text-background shadow-primary/20' : 'bg-gray-700 text-gray-500 pointer-events-none opacity-60'} font-black rounded-full p-2.5 shadow-xl transition-all duration-200 ${isAvailable ? 'hover:scale-110 active:scale-90' : ''} ${isAdding ? 'animate-cart-bounce' : ''}`}
+                            aria-label={isAvailable ? "Add to cart" : "Out of Stock"}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -139,14 +153,16 @@ const PromotionsBanner = React.memo(({ items, onCardClick }: { items: MenuItem[]
             </h2>
             <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-thin">
                 {items.map(item => (
-                    <div key={item.id} onClick={() => onCardClick(item)} className="snap-center shrink-0 w-72 h-40 bg-surface/50 backdrop-blur-lg border border-surface-light rounded-xl shadow-lg overflow-hidden cursor-pointer group flex hover:bg-surface-light/20 transition-colors">
+                    <div key={item.id} onClick={() => onCardClick(item)} className={`snap-center shrink-0 w-72 h-40 bg-surface/50 backdrop-blur-lg border border-surface-light rounded-xl shadow-lg overflow-hidden cursor-pointer group flex hover:bg-surface-light/20 transition-colors ${!item.isAvailable ? 'opacity-60' : ''}`}>
                         <div className="w-2/5 h-full relative">
-                             <img src={item.imageUrl} alt={item.name} loading="lazy" className="w-full h-full object-cover" />
+                             <img src={item.imageUrl} alt={item.name} loading="lazy" className={`w-full h-full object-cover ${!item.isAvailable ? 'grayscale-[0.5]' : ''}`} />
                         </div>
                         <div className="p-3 flex flex-col justify-center w-3/5 text-textPrimary">
                             <h3 className="font-bold font-heading text-base line-clamp-2">{item.name}</h3>
                             <p className="font-black font-heading text-primary text-xl mt-1">₹{item.price}</p>
-                            <span className="text-accent text-xs font-bold mt-auto group-hover:translate-x-1 transition-transform">Order Now &rarr;</span>
+                            <span className={`text-xs font-bold mt-auto group-hover:translate-x-1 transition-transform ${item.isAvailable ? 'text-accent' : 'text-red-400'}`}>
+                                {item.isAvailable ? 'Order Now →' : 'Out of Stock'}
+                            </span>
                         </div>
                     </div>
                 ))}
@@ -252,6 +268,30 @@ const MenuPage: React.FC = () => {
         navigate(`/customer/menu/${item.id}`, { state: { item } });
     }, [navigate]);
 
+    const handleAddToCart = useCallback((item: MenuItem) => {
+        // Safety check
+        if (!item.isAvailable) {
+            window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: '❌ This item is currently out of stock', type: 'cart-warn' } }));
+            return;
+        }
+
+        const cart = getCartFromStorage();
+        const existingItem = cart.find(cartItem => cartItem.id === item.id);
+        
+        let newCart;
+        if (existingItem) {
+            newCart = cart.map(cartItem => 
+                cartItem.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem
+            );
+        } else {
+            newCart = [...cart, { ...item, quantity: 1 }];
+        }
+        saveCartToStorage(newCart);
+
+        window.dispatchEvent(new CustomEvent('itemAddedToCart'));
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Item Added to Cart!', type: 'cart-add' } }));
+    }, []);
+
     const handleToggleFavorite = useCallback(async (itemId: string, isFavorited: boolean) => {
         if (!user) return;
         
@@ -273,24 +313,6 @@ const MenuPage: React.FC = () => {
             }
         }
     }, [user, menuItems, updateMenuItemOptimistic]);
-
-    const handleAddToCart = useCallback((item: MenuItem) => {
-        const cart = getCartFromStorage();
-        const existingItem = cart.find(cartItem => cartItem.id === item.id);
-        
-        let newCart;
-        if (existingItem) {
-            newCart = cart.map(cartItem => 
-                cartItem.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem
-            );
-        } else {
-            newCart = [...cart, { ...item, quantity: 1 }];
-        }
-        saveCartToStorage(newCart);
-
-        window.dispatchEvent(new CustomEvent('itemAddedToCart'));
-        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Item Added to Cart!', type: 'cart-add' } }));
-    }, []);
 
     const promotedItems = useMemo(() => {
         return menuItems

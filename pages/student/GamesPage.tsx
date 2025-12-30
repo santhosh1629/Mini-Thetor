@@ -32,14 +32,21 @@ const ScreenItemCard = React.memo(({
     onToggleFavorite: (itemId: string, isFavorited: boolean) => void;
     onAddToCart: (item: MenuItem) => void;
 }) => {
-    const { id, name, price, imageUrl, description, isFavorited, emoji } = item;
+    const { id, name, price, imageUrl, description, isFavorited, emoji, isAvailable } = item;
     const [isAdding, setIsAdding] = useState(false);
     const [isAnimatingFavorite, setIsAnimatingFavorite] = useState(false);
     const { user, promptForPhone } = useAuth();
 
     const handleAddToCartClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        // For screens, "+" button now acts as a shortcut to details/config
+        
+        // Safety check
+        if (!isAvailable) {
+            window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Experience currently unavailable', type: 'cart-warn' } }));
+            return;
+        }
+
+        // For screens, "+" button acts as a shortcut to details/config
         onAddToCart(item);
     };
 
@@ -61,13 +68,19 @@ const ScreenItemCard = React.memo(({
     };
     
     return (
-        <div onClick={() => onCardClick(item)} className="bg-indigo-950/40 backdrop-blur-lg border border-indigo-500/30 rounded-2xl shadow-lg overflow-hidden transition-all duration-200 hover:shadow-indigo-500/20 hover:bg-indigo-900/40 hover:-translate-y-1 cursor-pointer">
+        <div onClick={() => onCardClick(item)} className={`bg-indigo-950/40 backdrop-blur-lg border border-indigo-500/30 rounded-2xl shadow-lg overflow-hidden transition-all duration-200 hover:shadow-indigo-500/20 hover:bg-indigo-900/40 hover:-translate-y-1 cursor-pointer ${!isAvailable ? 'opacity-60' : ''}`}>
             <div className="relative aspect-video overflow-hidden bg-black/40">
-                <img src={imageUrl} alt={name} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 hover:scale-110" />
+                <img src={imageUrl} alt={name} loading="lazy" className={`w-full h-full object-cover transition-transform duration-500 ${isAvailable ? 'hover:scale-110' : 'grayscale-[0.5]'}`} />
                 <div className="absolute top-2 left-2 flex flex-col gap-1">
-                    <span className="text-[10px] font-black px-2.5 py-1 rounded-full text-white shadow-lg bg-green-500 shadow-green-500/20 backdrop-blur-md">
-                        AVAILABLE NOW
-                    </span>
+                    {isAvailable ? (
+                        <span className="text-[10px] font-black px-2.5 py-1 rounded-full text-white shadow-lg bg-green-500 shadow-green-500/20 backdrop-blur-md">
+                            AVAILABLE NOW
+                        </span>
+                    ) : (
+                        <span className="text-[10px] font-black px-2.5 py-1 rounded-full text-white shadow-lg bg-red-600 shadow-red-600/20 backdrop-blur-md uppercase">
+                            OFFLINE
+                        </span>
+                    )}
                 </div>
                 <button 
                     onClick={handleFavoriteClick}
@@ -87,8 +100,9 @@ const ScreenItemCard = React.memo(({
                     <div className="flex items-center gap-3">
                         <button
                             onClick={handleAddToCartClick}
-                            className={`bg-indigo-600 text-white font-bold rounded-full p-2.5 shadow-xl shadow-indigo-600/30 transition-all duration-200 hover:scale-110 active:scale-90 ${isAdding ? 'animate-cart-bounce' : ''}`}
-                            aria-label="View Details and Book"
+                            disabled={!isAvailable}
+                            className={`${isAvailable ? 'bg-indigo-600 shadow-indigo-600/30' : 'bg-gray-700 text-gray-400 pointer-events-none opacity-60'} text-white font-bold rounded-full p-2.5 shadow-xl transition-all duration-200 ${isAvailable ? 'hover:scale-110 active:scale-90' : ''} ${isAdding ? 'animate-cart-bounce' : ''}`}
+                            aria-label={isAvailable ? "View Details and Book" : "Experience Unavailable"}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -153,6 +167,8 @@ const GamesPage: React.FC = () => {
     }, [user, menuItems, updateMenuItemOptimistic]);
 
     const handleAddToCartShortcut = useCallback((item: MenuItem) => {
+        // Safety check for shortcut
+        if (!item.isAvailable) return;
         // For screens, we redirect to the details page so the user can select a slot
         handleCardClick(item);
     }, [handleCardClick]);
