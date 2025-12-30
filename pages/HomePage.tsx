@@ -57,32 +57,34 @@ const HomePage: React.FC = () => {
                 C
             </button>
             
-            <CopyrightModal isOpen={isCopyrightOpen} onClose={() => setIsCopyrightOpen(false)} />
+            <copyrightModal isOpen={isCopyrightOpen} onClose={() => setIsCopyrightOpen(false)} />
             
             <main className="relative z-20 flex flex-col items-center justify-center text-center w-full max-w-4xl animate-fade-in-up">
                  
-                 {/* Premium Logo Header */}
-                 <div className="mb-16 group cursor-default">
+                 {/* Premium Logo Header - Constrained width */}
+                 <div className="mb-16 group cursor-default px-4 sm:px-12">
                     <div className="flex flex-col items-center animate-gold-glow">
-                        <h1 className="text-gold font-logo text-7xl sm:text-8xl lg:text-9xl font-black tracking-[0.3em] leading-none uppercase mb-2 ml-[0.3em]">
+                        {/* Reduced tracking from 0.3em to 0.2em */}
+                        <h1 className="text-gold font-logo text-7xl sm:text-8xl lg:text-9xl font-black tracking-[0.2em] leading-none uppercase mb-2 ml-[0.2em]">
                             CINEMA
                         </h1>
-                        <div className="flex items-center w-full gap-4 sm:gap-8">
+                        <div className="flex items-center w-full gap-4 sm:gap-6">
                             <div className="h-[2px] flex-grow bg-gradient-to-r from-transparent to-primary/50"></div>
-                            <h2 className="text-white font-logo text-3xl sm:text-4xl lg:text-5xl font-bold tracking-[0.6em] uppercase whitespace-nowrap ml-[0.6em]">
+                            {/* Reduced tracking from 0.6em to 0.45em */}
+                            <h2 className="text-white font-logo text-3xl sm:text-4xl lg:text-5xl font-bold tracking-[0.45em] uppercase whitespace-nowrap ml-[0.45em]">
                                 CAFE
                             </h2>
                             <div className="h-[2px] flex-grow bg-gradient-to-l from-transparent to-primary/50"></div>
                         </div>
                     </div>
                     
-                    {/* Sub-tagline with subtle glow */}
-                    <div className="mt-8 flex items-center justify-center gap-3">
-                        <div className="w-1 h-1 rounded-full bg-primary/50"></div>
-                        <span className="text-primary/70 font-logo text-xs sm:text-sm tracking-[0.4em] uppercase">
+                    {/* Sub-tagline with enhanced gold color */}
+                    <div className="mt-10 flex items-center justify-center gap-4">
+                        <div className="w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_10px_rgba(192,192,192,0.8)]"></div>
+                        <span className="text-gold font-logo text-sm sm:text-base tracking-[0.45em] uppercase font-bold drop-shadow-md">
                             Happy Your Event
                         </span>
-                        <div className="w-1 h-1 rounded-full bg-primary/50"></div>
+                        <div className="w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_10px_rgba(192,192,192,0.8)]"></div>
                     </div>
                  </div>
 
