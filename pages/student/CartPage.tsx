@@ -161,7 +161,7 @@ const CartPage: React.FC = () => {
             key: 'rzp_test_1DP5mmOlF5G5ag', 
             amount: totalAmount * 100, // Amount in paise
             currency: "INR",
-            name: "MINI THEATRE",
+            name: "CINEMA CAFE",
             description: "Theater/Food Order Payment",
             image: "/favicon.ico",
             handler: (response: { razorpay_payment_id: string }) => {

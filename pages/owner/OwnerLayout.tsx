@@ -62,7 +62,7 @@ const OwnerLayout: React.FC = () => {
                     <button onClick={() => setIsDrawerOpen(true)} className="p-2 hover:bg-gray-700 rounded-lg lg:hidden transition-colors">
                         <MenuIcon />
                     </button>
-                    <h1 className="text-xl font-bold text-indigo-400 font-heading tracking-tight uppercase">MINI THEATRE <span className="text-xs font-normal text-gray-400 uppercase tracking-widest ml-2">Owner</span></h1>
+                    <h1 className="text-xl font-bold text-indigo-400 font-heading tracking-tight uppercase">CINEMA CAFE <span className="text-xs font-normal text-gray-400 uppercase tracking-widest ml-2">Owner</span></h1>
                 </div>
                 <div className="flex items-center gap-4">
                     <span className="hidden sm:inline text-sm text-gray-400">Welcome, <span className="text-white font-semibold">{user?.username}</span></span>

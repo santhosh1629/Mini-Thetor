@@ -15,7 +15,7 @@ const CopyrightModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ is
                 onClick={(e) => e.stopPropagation()}
             >
                 <p className="text-xl font-logo font-bold text-gold tracking-widest uppercase">
-                    MINI THEATRE
+                    CINEMA CAFE
                 </p>
                 <div className="w-12 h-[1px] bg-primary mx-auto my-4 opacity-50"></div>
                 <p className="text-sm text-slate-400 font-medium">
@@ -65,12 +65,12 @@ const HomePage: React.FC = () => {
                  <div className="mb-16 group cursor-default">
                     <div className="flex flex-col items-center animate-gold-glow">
                         <h1 className="text-gold font-logo text-7xl sm:text-8xl lg:text-9xl font-black tracking-[0.3em] leading-none uppercase mb-2 ml-[0.3em]">
-                            MINI
+                            CINEMA
                         </h1>
                         <div className="flex items-center w-full gap-4 sm:gap-8">
                             <div className="h-[2px] flex-grow bg-gradient-to-r from-transparent to-primary/50"></div>
                             <h2 className="text-white font-logo text-3xl sm:text-4xl lg:text-5xl font-bold tracking-[0.6em] uppercase whitespace-nowrap ml-[0.6em]">
-                                THEATRE
+                                CAFE
                             </h2>
                             <div className="h-[2px] flex-grow bg-gradient-to-l from-transparent to-primary/50"></div>
                         </div>
@@ -80,7 +80,7 @@ const HomePage: React.FC = () => {
                     <div className="mt-8 flex items-center justify-center gap-3">
                         <div className="w-1 h-1 rounded-full bg-primary/50"></div>
                         <span className="text-primary/70 font-logo text-xs sm:text-sm tracking-[0.4em] uppercase">
-                            Private Luxury Cinema
+                            Happy Your Event
                         </span>
                         <div className="w-1 h-1 rounded-full bg-primary/50"></div>
                     </div>

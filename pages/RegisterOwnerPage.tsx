@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -110,7 +109,7 @@ const RegisterOwnerPage: React.FC = () => {
                     <>
                         <div className="text-center mb-8">
                             <h2 className="text-4xl font-bold text-white">Partner Registration</h2>
-                            <p className="text-gray-300 mt-2">Join our network of cinemas.</p>
+                            <p className="text-gray-300 mt-2">Join our network of cafes.</p>
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-4">
@@ -146,7 +145,7 @@ const RegisterOwnerPage: React.FC = () => {
                                 <label htmlFor="terms" className="text-xs text-gray-300">
                                     I have read and agree to the{' '}
                                     <Link to="/terms?for=owner" className="font-bold text-indigo-400 hover:underline">
-                                        Sangeetha Cinemas Terms & Conditions (Owner).
+                                        Cinema Cafe Terms & Conditions (Owner).
                                     </Link>
                                     {' '}I confirm all business/bank details are true.
                                 </label>

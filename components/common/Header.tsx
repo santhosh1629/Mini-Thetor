@@ -28,10 +28,10 @@ const Header: React.FC = () => {
         <div className="flex items-center justify-between h-20">
           <Link to={getHomeLink()} className="flex flex-col items-center">
             <span className="font-logo font-black text-primary text-xl tracking-[0.2em] uppercase leading-none">
-                MINI
+                CINEMA
             </span>
             <span className="font-logo font-bold text-white text-[10px] tracking-[0.4em] uppercase mt-1">
-                THEATRE
+                CAFE
             </span>
           </Link>
           <div className="flex items-center gap-6">
