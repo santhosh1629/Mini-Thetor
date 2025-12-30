@@ -57,21 +57,21 @@ const HomePage: React.FC = () => {
                 C
             </button>
             
-            <copyrightModal isOpen={isCopyrightOpen} onClose={() => setIsCopyrightOpen(false)} />
+            <CopyrightModal isOpen={isCopyrightOpen} onClose={() => setIsCopyrightOpen(false)} />
             
             <main className="relative z-20 flex flex-col items-center justify-center text-center w-full max-w-4xl animate-fade-in-up">
                  
-                 {/* Premium Logo Header - Constrained width */}
-                 <div className="mb-16 group cursor-default px-4 sm:px-12">
+                 {/* Premium Logo Header - Width reduced via tighter tracking and increased side padding */}
+                 <div className="mb-16 group cursor-default px-14 sm:px-32 max-w-xl mx-auto w-full">
                     <div className="flex flex-col items-center animate-gold-glow">
-                        {/* Reduced tracking from 0.3em to 0.2em */}
-                        <h1 className="text-gold font-logo text-7xl sm:text-8xl lg:text-9xl font-black tracking-[0.2em] leading-none uppercase mb-2 ml-[0.2em]">
+                        {/* Tracking reduced to 0.12em for a more condensed width */}
+                        <h1 className="text-gold font-logo text-7xl sm:text-8xl lg:text-9xl font-black tracking-[0.12em] leading-none uppercase mb-2 ml-[0.12em]">
                             CINEMA
                         </h1>
-                        <div className="flex items-center w-full gap-4 sm:gap-6">
+                        <div className="flex items-center w-full gap-2 sm:gap-4">
                             <div className="h-[2px] flex-grow bg-gradient-to-r from-transparent to-primary/50"></div>
-                            {/* Reduced tracking from 0.6em to 0.45em */}
-                            <h2 className="text-white font-logo text-3xl sm:text-4xl lg:text-5xl font-bold tracking-[0.45em] uppercase whitespace-nowrap ml-[0.45em]">
+                            {/* Tracking reduced to 0.3em for CAFE */}
+                            <h2 className="text-white font-logo text-3xl sm:text-4xl lg:text-5xl font-bold tracking-[0.3em] uppercase whitespace-nowrap ml-[0.3em]">
                                 CAFE
                             </h2>
                             <div className="h-[2px] flex-grow bg-gradient-to-l from-transparent to-primary/50"></div>
