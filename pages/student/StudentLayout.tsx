@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import DynamicBackground from '../../components/student/DynamicBackground';
@@ -196,7 +197,7 @@ const CustomerLayout: React.FC = () => {
   useEffect(() => {
     const handleItemAdded = () => {
         setIsCartAnimating(true);
-        setTimeout(() => setIsCartAnimating(false), 600);
+        setTimeout(() => setIsCartAnimating(false), 300); // Snappier feedback
     };
     window.addEventListener('itemAddedToCart', handleItemAdded);
     return () => window.removeEventListener('itemAddedToCart', handleItemAdded);
@@ -217,7 +218,7 @@ const CustomerLayout: React.FC = () => {
     setTimeout(() => {
         logout();
         navigate('/');
-    }, 3000);
+    }, 1500); // Snappier logout
   };
 
   const primaryNavLinks = [
@@ -270,32 +271,16 @@ const CustomerLayout: React.FC = () => {
                 (o.status === OrderStatus.COLLECTED && o.items.some(i => i.category === 'game') && o.gameEndTime && new Date(o.gameEndTime).getTime() > Date.now())
             ) || null;
 
-            setActiveOrder(prevActiveOrder => {
-                if (
-                    Notification.permission === 'granted' &&
-                    currentActiveOrder &&
-                    prevActiveOrder &&
-                    currentActiveOrder.id === prevActiveOrder.id &&
-                    prevActiveOrder.status === OrderStatus.PENDING &&
-                    currentActiveOrder.status === OrderStatus.PREPARED
-                ) {
-                    new Notification('Order is ready for pickup!', {
-                        body: `Your order #${currentActiveOrder.id.slice(-6)} is prepared.`,
-                        icon: '/favicon.ico'
-                    });
-                }
-                return currentActiveOrder;
-            });
-        } catch (error) { 
-            // Silent catch to prevent UI disruptions during flutters
-        }
+            setActiveOrder(currentActiveOrder);
+        } catch (error) { }
     }
   }, [user]);
 
   useEffect(() => {
     if (user) {
         fetchActiveOrder();
-        const intervalId = setInterval(fetchActiveOrder, 8000); 
+        // Snappier background polling for layout-wide active order tracking
+        const intervalId = setInterval(fetchActiveOrder, 5000); 
         return () => clearInterval(intervalId);
     } else {
         setActiveOrder(null);
@@ -329,6 +314,7 @@ const CustomerLayout: React.FC = () => {
               flex items-center gap-4 p-3 pr-4 rounded-full shadow-lg text-white font-bold 
               border border-white/20 animate-toast ${getToastStyles(activeToast.type).bg} ${getToastStyles(activeToast.type).glow}
             `}
+            style={{ animationDuration: '2.5s' }}
           >
             <span className="flex-shrink-0 h-8 w-8 rounded-full bg-black/20 flex items-center justify-center text-xl">
               {getToastStyles(activeToast.type).icon}
@@ -338,162 +324,91 @@ const CustomerLayout: React.FC = () => {
         </div>
       )}
 
-      {/* Center Toast for Logout */}
-        {centerToast && (
-            <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[101] flex items-center justify-center animate-fade-in-down">
-                <div className="bg-gradient-to-br from-violet-600 to-red-600 p-8 rounded-2xl shadow-2xl w-64 h-64 flex flex-col items-center justify-center text-center">
-                    <span className="text-4xl mb-4">👋</span>
-                    <p className="text-white text-xl font-bold">{centerToast.message}</p>
-                </div>
-            </div>
-        )}
-
-        {/* Logout Confirmation Modal */}
-        {showLogoutConfirm && (
-            <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4 animate-fade-in-down">
-                <div className="bg-energetic-gradient p-1 rounded-2xl shadow-2xl max-w-sm w-full">
-                    <div className="bg-background rounded-xl p-8 text-center">
-                        <h2 className="text-2xl font-bold font-heading text-textPrimary mb-2">Log Out</h2>
-                        <p className="text-textSecondary mb-6">Are you sure you want to log out?</p>
-                        <div className="flex justify-center gap-4">
-                            <button onClick={() => setShowLogoutConfirm(false)} className="bg-surface hover:bg-surface-light text-textPrimary font-bold py-2 px-6 rounded-lg transition-colors">
-                                Cancel
-                            </button>
-                            <button onClick={confirmLogout} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg transition-colors">
-                                Yes, Logout
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        )}
-
-       {/* Drawer Overlay */}
-       <div
-          className={`fixed inset-0 bg-black/60 z-50 transition-opacity duration-300 ${isDrawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-          onClick={() => setIsDrawerOpen(false)}
-      />
-
-      {/* Side Drawer */}
-      <aside className={`fixed top-0 left-0 h-full w-64 bg-background/90 backdrop-blur-xl border-r border-surface-light shadow-xl z-50 transform transition-transform duration-300 ease-in-out ${isDrawerOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <div className="flex items-center justify-between p-4 border-b border-surface-light h-16">
-              <h2 className="text-xl font-bold font-heading text-primary">CINEMA CAFE</h2>
-              <button onClick={() => setIsDrawerOpen(false)} className="text-gray-400 hover:text-white">
-                  <CloseIcon />
-              </button>
-          </div>
-          <div className="p-4 flex flex-col h-[calc(100%-4rem)]">
-              <div className="flex-grow space-y-2">
-                  {drawerNavLinks.map(link => <DrawerNavLink key={link.to} to={link.to} icon={link.icon} label={link.label} isProtected={link.protected} />)}
-              </div>
-              <div className="mt-auto pt-4 border-t border-surface-light">
-                  {user && (
-                    <button
-                        onClick={() => { setIsDrawerOpen(false); setShowLogoutConfirm(true); }}
-                        className="flex items-center w-full px-4 py-3 rounded-lg text-lg font-medium text-textSecondary hover:bg-red-500/20 hover:text-red-300 transition-colors"
-                    >
-                        <LogoutIcon className="h-5 w-5 mr-3" />
-                        Logout
-                    </button>
-                  )}
-              </div>
-          </div>
-      </aside>
-
-       {/* Header */}
-      <header className="bg-background/60 backdrop-blur-lg sticky top-0 z-40 h-16 border-b border-surface-light">
-        <div className="container mx-auto h-full flex items-center justify-between px-4">
-            <div className="flex items-center gap-4">
-                <button onClick={() => setIsDrawerOpen(true)} className="text-gray-300 hover:text-white">
-                  <MenuIcon />
+      {/* Connection status and Active order header */}
+      <div className="sticky top-0 z-40">
+        <header className="bg-background/80 backdrop-blur-md border-b border-white/5 h-16 flex items-center justify-between px-4">
+             <div className="flex items-center gap-3">
+                <button onClick={() => setIsDrawerOpen(true)} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
+                    <MenuIcon />
                 </button>
                 <div className="flex flex-col">
-                    <h1 className="text-xl font-black font-heading text-textPrimary" style={{textShadow: '0 2px 4px rgba(0,0,0,0.5)'}}>{greeting}</h1>
-                    <ConnectionBadge />
+                    <span className="font-logo font-black text-primary text-sm tracking-widest leading-none">CINEMA</span>
+                    <span className="font-logo font-bold text-white text-[8px] tracking-[0.3em] uppercase mt-0.5">CAFE</span>
+                </div>
+             </div>
+             <div className="flex items-center gap-3">
+                <ConnectionBadge />
+                <button onClick={() => navigate('/customer/profile')} className="w-8 h-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center text-xs font-bold text-white">
+                    {user?.username?.charAt(0).toUpperCase() || 'U'}
+                </button>
+             </div>
+        </header>
+        {activeOrder && <ActiveOrderTracker order={activeOrder} />}
+      </div>
+
+      <main className="flex-1 container mx-auto px-4 py-6 pb-24">
+        <Outlet />
+      </main>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-xl border-t border-white/5 px-6 pb-safe">
+        <div className="flex justify-between items-center h-16 max-w-lg mx-auto">
+            {primaryNavLinks.map(link => (
+                <NavLink 
+                    key={link.to} 
+                    to={link.to} 
+                    className={({ isActive }) => `flex flex-col items-center gap-1 transition-all duration-300 ${isActive ? 'text-primary scale-110' : 'text-gray-500 hover:text-gray-300'}`}
+                >
+                    <div className="relative">
+                        {link.icon}
+                        {link.label === 'Cart' && cartCount > 0 && (
+                            <span className={`absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-black h-4 w-4 rounded-full flex items-center justify-center border border-background ${isCartAnimating ? 'animate-bounce' : ''}`}>
+                                {cartCount}
+                            </span>
+                        )}
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-tighter">{link.label}</span>
+                </NavLink>
+            ))}
+        </div>
+      </nav>
+
+      {/* Side Drawer */}
+      {isDrawerOpen && (
+        <>
+            <div className="fixed inset-0 bg-black/70 z-50 animate-fade-in" onClick={() => setIsDrawerOpen(false)} />
+            <aside className="fixed top-0 left-0 h-full w-72 bg-gray-900 border-r border-white/10 z-[60] animate-slide-in-left flex flex-col p-6 shadow-2xl">
+                <div className="flex justify-between items-center mb-8">
+                    <h2 className="text-xl font-black text-primary tracking-tighter uppercase">Menu</h2>
+                    <button onClick={() => setIsDrawerOpen(false)} className="text-gray-500 hover:text-white transition-colors"><CloseIcon /></button>
+                </div>
+                <div className="space-y-2 flex-grow">
+                    {drawerNavLinks.map(link => (
+                        <DrawerNavLink key={link.to} {...link} isProtected={link.protected} />
+                    ))}
+                </div>
+                <div className="pt-6 border-t border-white/10">
+                    <button onClick={() => setShowLogoutConfirm(true)} className="flex items-center w-full px-4 py-3 rounded-lg text-lg font-medium text-red-400 hover:bg-red-500/10 transition-colors">
+                        <LogoutIcon className="h-5 w-5 mr-3" /> Logout
+                    </button>
+                </div>
+            </aside>
+        </>
+      )}
+
+      {/* Logout Modal */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
+            <div className="bg-gray-900 border border-white/10 p-8 rounded-3xl max-w-sm w-full text-center shadow-2xl animate-pop-in">
+                <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">Ready to leave?</h2>
+                <p className="text-gray-400 mb-8 text-sm">We'll miss you! Make sure you've collected your snacks.</p>
+                <div className="flex gap-4">
+                    <button onClick={() => setShowLogoutConfirm(false)} className="flex-1 py-3 bg-white/5 text-white rounded-xl font-bold hover:bg-white/10 transition-colors">Stay</button>
+                    <button onClick={confirmLogout} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors">Logout</button>
                 </div>
             </div>
-             {user && (
-                <button onClick={() => setShowLogoutConfirm(true)} className="text-gray-300 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors" aria-label="Logout">
-                    <LogoutIcon />
-                </button>
-             )}
         </div>
-      </header>
-      
-      {activeOrder && <ActiveOrderTracker order={activeOrder} />}
-       
-       {/* Desktop Primary Nav */}
-       <nav className="hidden sm:flex bg-background/70 backdrop-blur-lg py-3 sticky top-16 z-30 border-b border-surface-light shadow-md">
-            <div className="container mx-auto flex justify-around items-center">
-                {primaryNavLinks.map(link => (
-                    <NavLink
-                        key={link.to}
-                        to={link.to}
-                        onClick={(e) => handleProtectedLinkClick(e, link.to)}
-                        className={({ isActive }) =>
-                            `flex items-center gap-2 font-semibold text-lg transition-colors pb-1 border-b-2 ${
-                            isActive ? 'border-primary text-primary' : 'border-transparent text-textSecondary hover:text-textPrimary'
-                            }`
-                        }
-                    >
-                        <div className={link.to === '/customer/cart' && isCartAnimating ? 'animate-cart-bounce' : ''}>
-                            {link.icon}
-                        </div>
-                        <span>{link.label}</span>
-                    </NavLink>
-                ))}
-            </div>
-        </nav>
-
-        {/* Main Content */}
-        <main className="flex-grow container mx-auto px-4 pt-6 pb-24 sm:pb-6">
-            <div key={location.pathname} className="animate-fade-in-down">
-                <Outlet />
-            </div>
-        </main>
-
-        {/* Floating Cart Button */}
-        {location.pathname !== '/customer/cart' && cartCount > 0 && (
-            <button
-                onClick={() => {
-                    if (!user) {
-                        promptForPhone(() => navigate('/customer/cart'));
-                    } else {
-                        navigate('/customer/cart');
-                    }
-                }}
-                className="fixed bottom-20 sm:bottom-8 right-4 sm:right-8 z-40 h-16 w-16 rounded-full bg-accent text-white shadow-lg flex items-center justify-center text-3xl animate-fade-in-up transform transition-transform duration-200 ease-in-out hover:scale-110 active:scale-90 group"
-                aria-label={`View cart with ${cartCount} items`}
-            >
-                <span className="group-hover:animate-shake">🛒</span>
-                <span className="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center border-2 border-background animate-pulse">
-                    {cartCount}
-                </span>
-            </button>
-        )}
-
-        {/* Bottom Nav for mobile */}
-        <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-lg border-t border-surface-light shadow-lg z-30">
-            <div className="flex justify-around items-center h-16">
-                {primaryNavLinks.map(link => (
-                    <NavLink
-                        key={link.to}
-                        to={link.to}
-                        onClick={(e) => handleProtectedLinkClick(e, link.to)}
-                        className={({ isActive }) =>
-                            `flex flex-col items-center justify-center gap-1 w-full transition-colors relative ${
-                            isActive ? 'text-primary' : 'text-textSecondary hover:text-primary'
-                            }`
-                        }
-                    >
-                        <div className={link.to === '/customer/cart' && isCartAnimating ? 'animate-cart-bounce' : ''}>
-                            {link.icon}
-                        </div>
-                        <span className="text-xs font-medium">{link.label}</span>
-                    </NavLink>
-                ))}
-            </div>
-        </nav>
+      )}
     </div>
   );
 };

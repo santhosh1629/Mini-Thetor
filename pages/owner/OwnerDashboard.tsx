@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import type { Order, SalesSummary, StudentPoints, TodaysDashboardStats, User, StaffRoleType } from '../../types';
@@ -8,6 +9,7 @@ import {
     getScanTerminalStaff, addStaffMember, updateStaffMember, deleteStaffMember
 } from '../../services/mockApi';
 import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../services/supabaseClient';
 
 // For xlsx library loaded from CDN
 declare const XLSX: any;
@@ -16,13 +18,15 @@ type DashboardTab = 'live' | 'analytics' | 'management' | 'history' | 'staff';
 
 // --- Reusable Components & Icons ---
 
-const ConnectionStatus: React.FC = () => (
-    <div className="flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-500/30 rounded-full">
+const ConnectionStatus: React.FC<{ isLive?: boolean }> = ({ isLive }) => (
+    <div className={`flex items-center gap-2 px-3 py-1 ${isLive ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'} border rounded-full transition-colors`}>
         <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+            {isLive && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${isLive ? 'bg-green-500' : 'bg-red-500'}`}></span>
         </span>
-        <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Live Orders Feed</span>
+        <span className={`text-[10px] font-bold ${isLive ? 'text-green-400' : 'text-red-400'} uppercase tracking-widest`}>
+            {isLive ? 'Realtime Connected' : 'Connecting...'}
+        </span>
     </div>
 );
 
@@ -77,7 +81,7 @@ const ScreenTimerDisplay: React.FC<{ endTime: string }> = ({ endTime }) => {
 
 // --- Tab Components ---
 
-const DailyStats: React.FC<{ stats: TodaysDashboardStats }> = ({ stats }) => {
+const DailyStats: React.FC<{ stats: TodaysDashboardStats, isLive: boolean }> = ({ stats, isLive }) => {
     const [isDownloading, setIsDownloading] = useState(false);
 
     const handleDownloadReport = async () => {
@@ -101,7 +105,7 @@ const DailyStats: React.FC<{ stats: TodaysDashboardStats }> = ({ stats }) => {
              <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-4">
                 <div className="flex flex-col gap-1">
                     <h2 className="text-2xl font-bold text-gray-200">Today's Performance</h2>
-                    <ConnectionStatus />
+                    <ConnectionStatus isLive={isLive} />
                 </div>
                 <button onClick={handleDownloadReport} disabled={isDownloading} className="bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition-all flex items-center justify-center gap-2 hover:bg-gray-600 disabled:opacity-50">
                     📂 {isDownloading ? 'Downloading...' : 'Daily Export'}
@@ -205,7 +209,7 @@ const OrdersManager: React.FC<{orders: Order[], onRefresh: () => void, onViewOrd
                                     <td className="px-6 py-4 whitespace-normal text-sm text-gray-400 align-top">
                                         <ul className="space-y-1">
                                             {order.items.map(i => (
-                                                <li key={i.id + (i.selected_slot_id || '')} className="flex items-center gap-2">
+                                                <li key={i.id + (i.selectedSlotId || '')} className="flex items-center gap-2">
                                                     <span className={i.isDelivered ? 'line-through opacity-50' : 'font-semibold text-white'}>{i.name} x{i.quantity}</span>
                                                     {i.isDelivered && <span className="text-[10px] text-green-500 font-bold uppercase">Served</span>}
                                                 </li>
@@ -233,8 +237,6 @@ const OrdersManager: React.FC<{orders: Order[], onRefresh: () => void, onViewOrd
         </div>
     );
 };
-
-// --- STAFF MANAGER COMPONENT ---
 
 const StaffManager: React.FC<{ staff: User[], onRefresh: () => void }> = ({ staff, onRefresh }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -444,11 +446,17 @@ export const OwnerDashboard: React.FC = () => {
     
     const [loading, setLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isRealtimeActive, setIsRealtimeActive] = useState(false);
 
     const fetchData = useCallback(async (isManual = false) => {
         if (!user) return;
         if (isManual) setIsRefreshing(true);
         try {
+            /**
+             * Fix: Correctly map Promise.all results to destructuring variables.
+             * getTodaysDetailedReport() returned index 6 which was incorrectly assigned to staffData.
+             * Removed getTodaysDetailedReport() from the array since it's not stored in state here.
+             */
             const [ordersData, salesData, sellingItemsData, statusSummaryData, pointsData, todaysStatsData, staffData] = await Promise.all([
                 getOwnerOrders(), getSalesSummary(), getMostSellingItems(), getOrderStatusSummary(), getStudentPointsList(), getTodaysDashboardStats(), getScanTerminalStaff()
             ]);
@@ -461,8 +469,43 @@ export const OwnerDashboard: React.FC = () => {
         }
     }, [user]);
 
+    // Initial Fetch
     useEffect(() => { fetchData(); }, [fetchData]);
-    useEffect(() => { const intervalId = setInterval(() => fetchData(), 20000); return () => clearInterval(intervalId); }, [fetchData]);
+
+    // SPEED-UP: Realtime Subscription logic
+    useEffect(() => {
+        if (!user) return;
+
+        console.log("🚀 Initializing Realtime Subscriptions for snappier process...");
+        
+        const ordersChannel = supabase
+            .channel('dashboard-updates')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'orders' },
+                (payload) => {
+                    console.log("⚡ Change detected in orders table:", payload.eventType);
+                    // Fetch everything again on any change for 100% accuracy, 
+                    // but we do it instantly instead of waiting 20s.
+                    fetchData();
+                    
+                    if (payload.eventType === 'INSERT') {
+                        window.dispatchEvent(new CustomEvent('show-owner-toast', { 
+                            detail: { message: '🔥 NEW ORDER RECEIVED!' } 
+                        }));
+                        // Play a snappy sound if needed here
+                    }
+                }
+            )
+            .subscribe((status) => {
+                console.log("🛰️ Realtime status:", status);
+                setIsRealtimeActive(status === 'SUBSCRIBED');
+            });
+
+        return () => {
+            supabase.removeChannel(ordersChannel);
+        };
+    }, [user, fetchData]);
 
     const TabButton: React.FC<{ tab: DashboardTab, label: string }> = ({ tab, label }) => (
         <button onClick={() => setActiveTab(tab)} className={`px-4 py-2 font-black uppercase tracking-widest text-[10px] rounded-full transition-all ${activeTab === tab ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'}`}>
@@ -510,7 +553,7 @@ export const OwnerDashboard: React.FC = () => {
                  <div className="flex flex-col items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-indigo-500 mb-4"></div><p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Loading Dashboard...</p></div>
             ) : (
                 <>
-                    <DailyStats stats={todaysStats} />
+                    <DailyStats stats={todaysStats} isLive={isRealtimeActive} />
                     <div className="bg-gray-800/50 backdrop-blur-md border border-gray-700 p-2 rounded-full flex flex-wrap gap-2 mb-6 sticky top-20 z-10 w-fit">
                         <TabButton tab="live" label="Live Queue" />
                         <TabButton tab="staff" label="Staff" />

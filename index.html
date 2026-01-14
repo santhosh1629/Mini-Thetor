@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -38,11 +39,11 @@
             },
             keyframes: {
               'fade-in-down': {
-                '0%': { opacity: '0', transform: 'translateY(-20px)' },
+                '0%': { opacity: '0', transform: 'translateY(-10px)' },
                 '100%': { opacity: '1', transform: 'translateY(0)' },
               },
               'fade-in-up': {
-                '0%': { opacity: '0', transform: 'translateY(20px)' },
+                '0%': { opacity: '0', transform: 'translateY(10px)' },
                 '100%': { opacity: '1', transform: 'translateY(0)' },
               },
               'gold-glow': {
@@ -51,8 +52,8 @@
               }
             },
             animation: {
-              'fade-in-down': 'fade-in-down 0.8s ease-out forwards',
-              'fade-in-up': 'fade-in-up 0.8s ease-out forwards',
+              'fade-in-down': 'fade-in-down 0.4s ease-out forwards',
+              'fade-in-up': 'fade-in-up 0.4s ease-out forwards',
               'gold-glow': 'gold-glow 4s ease-in-out infinite alternate',
             }
           }
@@ -79,6 +80,10 @@
         background: linear-gradient(to bottom, #FDE68A 0%, #D4AF37 50%, #B45309 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
+      }
+      /* Snappy transitions */
+      * {
+        transition-duration: 200ms !important;
       }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>

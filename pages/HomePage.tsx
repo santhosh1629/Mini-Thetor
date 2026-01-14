@@ -78,11 +78,11 @@ const HomePage: React.FC = () => {
                         </div>
                     </div>
                     
-                    {/* Sub-tagline with enhanced gold color */}
+                    {/* Sub-tagline with enhanced gold color - Updated text */}
                     <div className="mt-10 flex items-center justify-center gap-4">
                         <div className="w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_10px_rgba(192,192,192,0.8)]"></div>
-                        <span className="text-gold font-logo text-sm sm:text-base tracking-[0.45em] uppercase font-bold drop-shadow-md">
-                            Happy Your Event
+                        <span className="text-gold font-logo text-xs sm:text-sm tracking-[0.25em] uppercase font-bold drop-shadow-md whitespace-nowrap">
+                            Food • Games • Entertainment
                         </span>
                         <div className="w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_10px_rgba(192,192,192,0.8)]"></div>
                     </div>
@@ -108,7 +108,7 @@ const HomePage: React.FC = () => {
                     />
                 </div>
                 
-                {/* Minimal Luxury Buttons */}
+                {/* Minimal Luxury Buttons - Both buttons now share the same consistent white styling */}
                 <div className="flex flex-col sm:flex-row gap-6 w-full max-w-xs sm:max-w-2xl px-4">
                     <button
                         onClick={() => navigate('/customer/menu')}
@@ -119,9 +119,9 @@ const HomePage: React.FC = () => {
                     
                     <button
                         onClick={() => navigate('/customer/games')}
-                        className="group relative flex-1 border border-primary/30 text-primary font-bold py-4 rounded-full tracking-[0.2em] uppercase text-xs overflow-hidden transition-all duration-500 hover:border-primary hover:bg-primary/5 hover:shadow-[0_0_30px_rgba(212,175,55,0.2)]"
+                        className="group relative flex-1 bg-white text-black font-bold py-4 rounded-full tracking-[0.2em] uppercase text-xs overflow-hidden transition-all duration-500 hover:bg-primary hover:shadow-[0_0_30px_rgba(212,175,55,0.4)]"
                     >
-                        <span className="relative z-10">Private Screens</span>
+                        <span className="relative z-10">Games</span>
                     </button>
                 </div>
                 

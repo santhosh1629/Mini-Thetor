@@ -1,3 +1,4 @@
+
 import { supabase } from './supabaseClient';
 import type { User, MenuItem, Order, SalesSummary, Feedback, Offer, StudentProfile, Reward, StudentPoints, TodaysDashboardStats, TodaysDetailedReport, AdminStats, OwnerBankDetails, CanteenPhoto, CartItem, AvailabilityResult, CommissionRecord } from '../types';
 import { OrderStatus as OrderStatusEnum, Role } from '../types';
@@ -29,19 +30,28 @@ const mapOrder = (o: any): Order => ({
     timestamp: new Date(o.created_at),
     collectedAt: o.collected_at,
     orderType: 'real',
-    items: (o.order_items || []).map((oi: any) => ({
-        id: oi.menu_item_id,
-        name: oi.name,
-        quantity: Number(oi.quantity || 0),
-        price: Number(oi.price || 0),
-        notes: oi.notes,
-        category: normalizeCategory(oi.category),
-        selected_slot_id: oi.selected_slot_id,
-        selected_start_time: oi.selected_start_time,
-        duration_minutes: oi.duration_minutes,
-        isDelivered: oi.is_delivered ?? false,
-        deliveredQuantity: oi.delivered_quantity ?? 0
-    }))
+    items: (o.order_items || []).map((oi: any) => {
+        const category = normalizeCategory(oi.category);
+        // Robust fallback images based on category
+        const fallbackImg = category === 'game' 
+            ? 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&q=80&w=600' // Cinema Projector
+            : 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=600'; // Cafe Food
+            
+        return {
+            id: oi.menu_item_id,
+            name: oi.name,
+            quantity: Number(oi.quantity || 0),
+            price: Number(oi.price || 0),
+            notes: oi.notes,
+            imageUrl: oi.image_url || fallbackImg,
+            category: category,
+            selectedSlotId: oi.selected_slot_id,
+            selectedStartTime: oi.selected_start_time,
+            durationMinutes: oi.duration_minutes,
+            isDelivered: oi.is_delivered ?? false,
+            deliveredQuantity: oi.delivered_quantity ?? 0
+        };
+    })
 });
 
 // --- ORDER OPERATIONS ---
@@ -70,9 +80,9 @@ export const placeOrder = async (orderData: any): Promise<Order> => {
         .insert([{
             student_id: orderData.studentId,
             student_name: orderData.studentName,
-            customer_phone: orderData.customerPhone || orderData.customer_phone || '',
-            seat_number: orderData.seat_number || orderData.seatNumber || '',
-            total_amount: Number(orderData.total_amount || orderData.totalAmount || 0),
+            customer_phone: orderData.customerPhone || '',
+            seat_number: orderData.seatNumber || '',
+            total_amount: Number(orderData.totalAmount || 0),
             qr_token: qrToken,
             status: OrderStatusEnum.PENDING
         }])
@@ -88,9 +98,10 @@ export const placeOrder = async (orderData: any): Promise<Order> => {
         quantity: item.quantity,
         price: item.price,
         notes: item.notes || null,
-        selected_slot_id: item.selectedSlotId || item.selected_slot_id || null,
-        selected_start_time: item.selectedStartTime || item.selected_start_time || null,
-        duration_minutes: item.durationMinutes || item.duration_minutes || 60,
+        image_url: item.imageUrl || '',
+        selected_slot_id: item.selectedSlotId || null,
+        selected_start_time: item.selectedStartTime || null,
+        duration_minutes: item.durationMinutes || 60,
         category: normalizeCategory(item.category),
         is_delivered: false,
         delivered_quantity: 0
@@ -174,7 +185,7 @@ export const getMenu = async (studentId?: string): Promise<MenuItem[]> => {
             durationMinutes: item.duration_minutes, 
             averageRating: Number(item.average_rating) || 0,
             favoriteCount: item.favorite_count || 0,
-            isAvailable: item.is_available ?? true, // DEFAULT ENABLED
+            isAvailable: item.is_available ?? true,
             category: normalizeCategory(item.category) 
         })); 
 
@@ -202,7 +213,7 @@ export const getMenuItemById = async (itemId: string, studentId?: string): Promi
             durationMinutes: data.duration_minutes, 
             averageRating: Number(data.average_rating) || 0,
             favoriteCount: data.favorite_count || 0,
-            isAvailable: data.is_available ?? true, // DEFAULT ENABLED
+            isAvailable: data.is_available ?? true,
             category: normalizeCategory(data.category) 
         }; 
         if (studentId) { 
@@ -315,7 +326,7 @@ export const getStudentOrders = async (studentId: string): Promise<Order[]> => {
 };
 
 export const updateOrderStatus = async (order_id: string, status: OrderStatusEnum): Promise<void> => { 
-    const { error } = await supabase.from('orders').update({ status }).eq('id', order_id); 
+    const { error = null } = await supabase.from('orders').update({ status }).eq('id', order_id); 
     if (error) throw new Error(getErrorMessage(error)); 
 };
 
@@ -358,7 +369,7 @@ export const checkSlotAvailability = async (itemId: string, slotId: string, star
 };
 
 export const submitFeedback = async (feedbackData: any): Promise<void> => { 
-    const { error } = await supabase.from('feedbacks').insert([{ student_id: feedbackData.studentId, menu_item_id: feedbackData.itemId, rating: feedbackData.rating, comment: feedbackData.comment }]); 
+    const { error = null } = await supabase.from('feedbacks').insert([{ student_id: feedbackData.studentId, menu_item_id: feedbackData.itemId, rating: feedbackData.rating, comment: feedbackData.comment }]); 
     if (error) throw new Error(getErrorMessage(error)); 
 };
 
@@ -373,7 +384,7 @@ export const getFeedbacks = async (): Promise<Feedback[]> => {
 export const requestSaveBankDetailsOtp = async (details: OwnerBankDetails): Promise<void> => { return Promise.resolve(); };
 export const verifyOtpAndSaveBankDetails = async (details: OwnerBankDetails, otp: string, userId: string): Promise<OwnerBankDetails> => { 
     if (otp !== '123456') throw new Error("Invalid OTP"); 
-    const { error } = await supabase.from('profiles').update({ bank_details: details }).eq('id', userId); 
+    const { error = null } = await supabase.from('profiles').update({ bank_details: details }).eq('id', userId); 
     if (error) throw new Error(getErrorMessage(error)); 
     return details; 
 };
@@ -385,7 +396,7 @@ export const getOwnerBankDetails = async (ownerId: string): Promise<OwnerBankDet
 };
 
 export const deleteScanTerminalStaff = async (userId: string): Promise<void> => { 
-    const { error } = await supabase.from('profiles').delete().eq('id', userId); 
+    const { error = null } = await supabase.from('profiles').delete().eq('id', userId); 
     if (error) throw new Error(getErrorMessage(error)); 
 };
 
@@ -410,7 +421,7 @@ export const updateOffer = async (id: string, offerData: any) => {
 };
 
 export const deleteOffer = async (id: string) => { 
-    const { error } = await supabase.from('offers').delete().eq('id', id); 
+    const { error = null } = await supabase.from('offers').delete().eq('id', id); 
     if (error) throw new Error(getErrorMessage(error)); 
 };
 
@@ -435,7 +446,7 @@ export const updateReward = async (id: string, rewardData: any) => {
 };
 
 export const deleteReward = async (id: string) => { 
-    const { error } = await supabase.from('rewards').delete().eq('id', id); 
+    const { error = null } = await supabase.from('rewards').delete().eq('id', id); 
     if (error) throw new Error(getErrorMessage(error)); 
 };
 
@@ -475,12 +486,12 @@ export const updateCanteenPhoto = async (id: string, file: File): Promise<Cantee
 };
 
 export const updateOwnerApprovalStatus = async (userId: string, status: 'approved' | 'rejected'): Promise<void> => { 
-    const { error } = await supabase.from('profiles').update({ approval_status: status, approval_date: status === 'approved' ? new Date().toISOString() : null }).eq('id', userId); 
+    const { error = null } = await supabase.from('profiles').update({ approval_status: status, approval_date: status === 'approved' ? new Date().toISOString() : null }).eq('id', userId); 
     if (error) throw new Error(getErrorMessage(error)); 
 };
 
 export const removeOwnerAccount = async (userId: string): Promise<void> => { 
-    const { error } = await supabase.from('profiles').delete().eq('id', userId); 
+    const { error = null } = await supabase.from('profiles').delete().eq('id', userId); 
     if (error) throw new Error(getErrorMessage(error)); 
 };
 
@@ -576,7 +587,7 @@ export const getStudentPointsList = async () => [];
 export const getTodaysDetailedReport = async (): Promise<TodaysDetailedReport> => ({ date: '', totalOrders: 0, totalIncome: 0, itemSales: [] });
 
 export const updateOrderSeatNumber = async (id: string, sn: string) => { 
-    const { error } = await supabase.from('orders').update({ seat_number: sn }).eq('id', id); 
+    const { error = null } = await supabase.from('orders').update({ seat_number: sn }).eq('id', id); 
     if (error) throw new Error(getErrorMessage(error)); 
 };
 
