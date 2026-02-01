@@ -262,7 +262,7 @@ const FoodDetailPage: React.FC = () => {
                         </div>
                         
                         <div className="flex flex-col">
-                            <div className="flex justify-between items-start mb-4">
+                            <div className="flex justify-between items-start mb-2">
                                 <h1 className="text-3xl font-extrabold leading-tight font-heading">{item.emoji} {item.name}</h1>
                                 {!item.isAvailable && (
                                     <span className="bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-full animate-pulse uppercase">Out of Stock</span>
@@ -272,6 +272,15 @@ const FoodDetailPage: React.FC = () => {
                             {item.averageRating != null && (
                                 <div className="mb-4">
                                     <StarDisplay rating={item.averageRating} reviewCount={reviews.length} />
+                                </div>
+                            )}
+
+                            {/* ITEM DESCRIPTION SECTION */}
+                            {item.description && (
+                                <div className="mb-6 animate-fade-in">
+                                    <p className="text-sm text-white/70 leading-relaxed italic border-l-2 border-primary/40 pl-3">
+                                        {item.description}
+                                    </p>
                                 </div>
                             )}
 
