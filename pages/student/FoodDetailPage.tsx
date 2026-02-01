@@ -1,9 +1,12 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { getMenuItemById, getFeedbacks, checkSlotAvailability } from '../../services/mockApi';
 import { useAuth } from '../../context/AuthContext';
 import type { MenuItem, Feedback, CartItem } from '../../types';
 import Button from '../../components/common/Button';
+
+const AC_SURCHARGE = 50;
 
 const getCartFromStorage = (): CartItem[] => {
     try {
@@ -51,9 +54,8 @@ const FoodDetailPage: React.FC = () => {
 
     const [item, setItem] = useState<MenuItem | null>(location.state?.item || null);
     const [reviews, setReviews] = useState<Feedback[]>([]);
-    const [activeTab, setActiveTab] = useState<'description' | 'reviews'>('description');
-    
     const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+    const [seatType, setSeatType] = useState<'AC' | 'Non-AC'>('Non-AC');
     const [startTimeInput, setStartTimeInput] = useState<string>(() => {
         const now = new Date();
         return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -69,6 +71,11 @@ const FoodDetailPage: React.FC = () => {
         const cat = (item.category || '').toLowerCase();
         return cat === 'game' || cat === 'screen' || (item.slotIds && item.slotIds.length > 0);
     }, [item]);
+
+    const finalPrice = useMemo(() => {
+        if (!item) return 0;
+        return seatType === 'AC' ? item.price + AC_SURCHARGE : item.price;
+    }, [item, seatType]);
 
     const calculatedTimes = useMemo(() => {
         if (!item || !isScreen || !startTimeInput) return null;
@@ -141,7 +148,6 @@ const FoodDetailPage: React.FC = () => {
      const handleAddToCart = useCallback(() => {
         if (!item) return;
 
-        // --- MANDATORY SAFETY CHECK ---
         if (!item.isAvailable) {
             window.dispatchEvent(new CustomEvent('show-toast', { 
                 detail: { message: '❌ This item is currently out of stock', type: 'cart-warn' } 
@@ -195,11 +201,13 @@ const FoodDetailPage: React.FC = () => {
              
              newCart = [...cart, { 
                 ...item, 
+                price: finalPrice, // Save adjusted price
                 quantity: 1, 
                 selectedSlotId: selectedSlot || undefined, 
                 selectedStartTime: startDateTime,
                 durationMinutes: item.durationMinutes || 60,
-                category: 'game'
+                category: 'game',
+                seatType: seatType
              }];
         } else {
             const existingItemIndex = cart.findIndex(ci => ci.id === item.id && ci.category !== 'game');
@@ -218,7 +226,7 @@ const FoodDetailPage: React.FC = () => {
                 detail: { message: '✅ Added to Cart!', type: 'cart-add' } 
             }));
         }
-    }, [user, item, isScreen, selectedSlot, startTimeInput, calculatedTimes, isAvailable, isChecking, conflictInfo, promptForPhone]);
+    }, [user, item, isScreen, selectedSlot, startTimeInput, calculatedTimes, isAvailable, isChecking, conflictInfo, promptForPhone, finalPrice, seatType]);
 
 
     if (loading) {
@@ -231,9 +239,6 @@ const FoodDetailPage: React.FC = () => {
 
     if (!item) return null;
 
-    // Single source of truth for the button disabled state.
-    // For food, ONLY isAvailable matters.
-    // For screens, isAvailable matters AND slot selection logic.
     const isActuallyDisabled = !item.isAvailable || (isScreen && (!selectedSlot || isAvailable === false || isChecking));
 
     return (
@@ -270,15 +275,46 @@ const FoodDetailPage: React.FC = () => {
                                 </div>
                             )}
 
-                            <div className="p-4 bg-black/20 rounded-xl border border-white/5 shadow-inner">
-                                <p className="text-sm text-gray-300 uppercase font-bold tracking-wider mb-1">Price</p>
-                                <div className="flex items-baseline gap-2">
-                                    <p className="text-4xl font-black text-primary font-heading">₹{item.price.toFixed(0)}</p>
-                                    <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">per booking</span>
+                            {/* AC / Non-AC Selection (Only for Screens) */}
+                            {isScreen && item.isAvailable && (
+                                <div className="mb-6 p-1 bg-black/40 rounded-xl flex gap-1 border border-white/10">
+                                    <button 
+                                        onClick={() => setSeatType('Non-AC')}
+                                        className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all ${seatType === 'Non-AC' ? 'bg-primary text-background shadow-lg' : 'text-gray-400 hover:text-white'}`}
+                                    >
+                                        Standard (Non-AC)
+                                    </button>
+                                    <button 
+                                        onClick={() => setSeatType('AC')}
+                                        className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all ${seatType === 'AC' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}
+                                    >
+                                        Executive (AC)
+                                    </button>
                                 </div>
-                                {isScreen && item.durationMinutes && (
-                                    <p className="text-sm text-indigo-300 mt-2 flex items-center gap-1 font-semibold italic">⏱️ Duration: {item.durationMinutes} Mins</p>
-                                )}
+                            )}
+
+                            <div className="p-4 bg-black/20 rounded-xl border border-white/5 shadow-inner">
+                                <div className="flex justify-between items-end">
+                                    <div>
+                                        <p className="text-[10px] text-gray-400 uppercase font-black tracking-[0.2em] mb-1">Pricing Breakdown</p>
+                                        <div className="space-y-1">
+                                            <p className="text-sm text-white/80 flex justify-between gap-4">
+                                                <span>Base Ticket:</span>
+                                                <span className="font-mono">₹{item.price}</span>
+                                            </p>
+                                            {seatType === 'AC' && (
+                                                <p className="text-sm text-indigo-300 flex justify-between gap-4">
+                                                    <span>AC Premium:</span>
+                                                    <span className="font-mono">+₹{AC_SURCHARGE}</span>
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[10px] text-gray-400 uppercase font-black tracking-[0.2em] mb-1">Total</p>
+                                        <p className="text-4xl font-black text-primary font-heading">₹{finalPrice.toFixed(0)}</p>
+                                    </div>
+                                </div>
                             </div>
                             
                             {isScreen && item.slotIds && item.isAvailable && (

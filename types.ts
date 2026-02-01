@@ -1,3 +1,4 @@
+
 export enum Role {
   STUDENT = 'STUDENT',
   CANTEEN_OWNER = 'CANTEEN_OWNER',
@@ -59,6 +60,7 @@ export interface CartItem extends MenuItem {
   notes?: string;
   selectedSlotId?: string;
   selectedStartTime?: string;
+  seatType?: 'AC' | 'Non-AC';
 }
 
 export enum OrderStatus {
@@ -88,6 +90,7 @@ export interface Order {
     selectedStartTime?: string;
     isDelivered?: boolean;
     deliveredQuantity?: number;
+    seatType?: 'AC' | 'Non-AC';
   }[];
   totalAmount: number;
   status: OrderStatus;

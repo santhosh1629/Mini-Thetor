@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { CartItem } from '../../types';
@@ -64,7 +65,7 @@ const CartPage: React.FC = () => {
     };
 
     const getItemUniqueKey = (item: CartItem) => {
-        return item.id + (item.selectedSlotId || '') + (item.selectedStartTime || '');
+        return item.id + (item.selectedSlotId || '') + (item.selectedStartTime || '') + (item.seatType || '');
     };
 
     const handleQuantityChange = (itemKey: string, newQuantity: number) => {
@@ -83,7 +84,6 @@ const CartPage: React.FC = () => {
     const handleRealOrderPlacement = async (paymentId: string) => {
         if (!user) return;
 
-        // Optionally update user profile if phone changed
         if (user.phone !== phoneNumber) {
             try {
                 await updateUser({ phone: phoneNumber });
@@ -97,7 +97,7 @@ const CartPage: React.FC = () => {
                 studentId: user.id, 
                 studentName: customerName,
                 customerPhone: phoneNumber,
-                items: cart.map(({ id, name, quantity, price, notes, imageUrl, category, selectedSlotId, durationMinutes, selectedStartTime }) => ({ 
+                items: cart.map(({ id, name, quantity, price, notes, imageUrl, category, selectedSlotId, durationMinutes, selectedStartTime, seatType }) => ({ 
                     id, 
                     name, 
                     quantity, 
@@ -107,7 +107,8 @@ const CartPage: React.FC = () => {
                     category: category ? category.toLowerCase() : 'food', 
                     selectedSlotId, 
                     durationMinutes, 
-                    selectedStartTime 
+                    selectedStartTime,
+                    seatType
                 })),
                 totalAmount,
                 seatNumber: seatNumber,
@@ -142,7 +143,6 @@ const CartPage: React.FC = () => {
         setValidationError('');
         setIsPlacingOrder(true);
 
-        // --- Final Safety Check for Screen Bookings ---
         const gameItems = cart.filter(i => i.category === 'game');
         for (const item of gameItems) {
             if (item.selectedSlotId && item.selectedStartTime) {
@@ -159,7 +159,7 @@ const CartPage: React.FC = () => {
 
         const options = {
             key: 'rzp_test_1DP5mmOlF5G5ag', 
-            amount: totalAmount * 100, // Amount in paise
+            amount: totalAmount * 100, 
             currency: "INR",
             name: "CINEMA CAFE",
             description: "Theater/Food Order Payment",
@@ -233,7 +233,14 @@ const CartPage: React.FC = () => {
                             <div key={itemKey + idx} className="bg-surface/50 backdrop-blur-lg border border-surface-light rounded-lg p-4 flex gap-4 items-start shadow-md">
                                 <img src={item.imageUrl} alt={item.name} className="w-24 h-24 object-cover rounded-md" />
                                 <div className="flex-grow">
-                                    <h3 className="font-bold font-heading text-lg">{item.name}</h3>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <h3 className="font-bold font-heading text-lg">{item.name}</h3>
+                                        {item.seatType && (
+                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase ${item.seatType === 'AC' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-400'}`}>
+                                                {item.seatType}
+                                            </span>
+                                        )}
+                                    </div>
                                     <p className="font-bold font-heading text-primary">₹{item.price}</p>
                                     
                                     {isGame && item.selectedSlotId && (

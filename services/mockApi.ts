@@ -30,28 +30,21 @@ const mapOrder = (o: any): Order => ({
     timestamp: new Date(o.created_at),
     collectedAt: o.collected_at,
     orderType: 'real',
-    items: (o.order_items || []).map((oi: any) => {
-        const category = normalizeCategory(oi.category);
-        // Robust fallback images based on category
-        const fallbackImg = category === 'game' 
-            ? 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&q=80&w=600' // Cinema Projector
-            : 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=600'; // Cafe Food
-            
-        return {
-            id: oi.menu_item_id,
-            name: oi.name,
-            quantity: Number(oi.quantity || 0),
-            price: Number(oi.price || 0),
-            notes: oi.notes,
-            imageUrl: oi.image_url || fallbackImg,
-            category: category,
-            selectedSlotId: oi.selected_slot_id,
-            selectedStartTime: oi.selected_start_time,
-            durationMinutes: oi.duration_minutes,
-            isDelivered: oi.is_delivered ?? false,
-            deliveredQuantity: oi.delivered_quantity ?? 0
-        };
-    })
+    items: (o.order_items || []).map((oi: any) => ({
+        id: oi.menu_item_id,
+        name: oi.name,
+        quantity: Number(oi.quantity || 0),
+        price: Number(oi.price || 0),
+        notes: oi.notes,
+        imageUrl: oi.image_url || 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&q=80&w=300',
+        category: normalizeCategory(oi.category),
+        selectedSlotId: oi.selected_slot_id,
+        selectedStartTime: oi.selected_start_time,
+        durationMinutes: oi.duration_minutes,
+        isDelivered: oi.is_delivered ?? false,
+        delivered_quantity: oi.delivered_quantity ?? 0,
+        seatType: oi.seat_type
+    }))
 });
 
 // --- ORDER OPERATIONS ---
@@ -80,9 +73,9 @@ export const placeOrder = async (orderData: any): Promise<Order> => {
         .insert([{
             student_id: orderData.studentId,
             student_name: orderData.studentName,
-            customer_phone: orderData.customerPhone || '',
-            seat_number: orderData.seatNumber || '',
-            total_amount: Number(orderData.totalAmount || 0),
+            customer_phone: orderData.customerPhone || orderData.customer_phone || '',
+            seat_number: orderData.seatNumber || orderData.seat_number || '',
+            total_amount: Number(orderData.totalAmount || orderData.total_amount || 0),
             qr_token: qrToken,
             status: OrderStatusEnum.PENDING
         }])
@@ -98,13 +91,14 @@ export const placeOrder = async (orderData: any): Promise<Order> => {
         quantity: item.quantity,
         price: item.price,
         notes: item.notes || null,
-        image_url: item.imageUrl || '',
-        selected_slot_id: item.selectedSlotId || null,
-        selected_start_time: item.selectedStartTime || null,
-        duration_minutes: item.durationMinutes || 60,
+        image_url: item.imageUrl || item.image_url || '',
+        selected_slot_id: item.selectedSlotId || item.selected_slot_id || null,
+        selected_start_time: item.selectedStartTime || item.selected_start_time || null,
+        duration_minutes: item.durationMinutes || item.duration_minutes || 60,
         category: normalizeCategory(item.category),
         is_delivered: false,
-        delivered_quantity: 0
+        delivered_quantity: 0,
+        seat_type: item.seatType || 'Non-AC'
     }));
 
     const { error: itemsErr } = await supabase.from('order_items').insert(itemsToInsert);
@@ -173,28 +167,26 @@ export const verifyQrCodeAndCollectOrder = async (token: string, staffId: string
 
 export const getMenu = async (studentId?: string): Promise<MenuItem[]> => { 
     try { 
-        const { data, error } = await supabase.from('menu_items').select('*').order('name', { ascending: true }); 
+        const { data, error } = await supabase
+            .from('menu_items')
+            .select('id, name, price, image_url, is_available, category, is_combo, average_rating, favorite_count, emoji')
+            .limit(50)
+            .order('name', { ascending: true }); 
+
         if (error) throw error; 
         
         let menu = (data || []).map(item => ({ 
             ...item, 
             imageUrl: item.image_url, 
-            isCombo: item.is_combo, 
-            comboItems: item.combo_items, 
-            slotIds: item.slot_ids, 
-            durationMinutes: item.duration_minutes, 
-            averageRating: Number(item.average_rating) || 0,
-            favoriteCount: item.favorite_count || 0,
             isAvailable: item.is_available ?? true,
-            category: normalizeCategory(item.category) 
+            category: normalizeCategory(item.category),
+            averageRating: Number(item.average_rating) || 0
         })); 
 
         if (studentId && menu.length > 0) { 
-            try { 
-                const { data: favs } = await supabase.from('favorites').select('menu_item_id').eq('student_id', studentId); 
-                const favIds = new Set(favs?.map(f => f.menu_item_id) || []); 
-                menu = menu.map(item => ({ ...item, isFavorited: favIds.has(item.id) })); 
-            } catch (favErr) {} 
+            const { data: favs } = await supabase.from('favorites').select('menu_item_id').eq('student_id', studentId); 
+            const favIds = new Set(favs?.map(f => f.menu_item_id) || []); 
+            menu = menu.map(item => ({ ...item, isFavorited: favIds.has(item.id) })); 
         } 
         return menu as MenuItem[]; 
     } catch (err) { return []; } 
@@ -306,7 +298,7 @@ export const updateStaffMember = async (id: string, staffData: any) => {
 };
 
 export const deleteStaffMember = async (id: string) => {
-    const { error } = await supabase.from('profiles').delete().eq('id', id);
+    const { error = null } = await supabase.from('profiles').delete().eq('id', id);
     if (error) throw new Error(getErrorMessage(error));
 };
 
@@ -558,10 +550,40 @@ export const getOwnerStatus = async (ownerId?: string): Promise<{ isOnline: bool
 
 export const getStudentProfile = async (id: string): Promise<StudentProfile> => { 
     try { 
-        const { data, error } = await supabase.from('profiles').select('*').eq('id', id).single(); 
-        if (error || !data) throw new Error("Profile not found"); 
-        return { id: data.id, name: data.username, phone: data.phone, totalOrders: 0, lifetimeSpend: 0, favoriteItemsCount: 0, loyaltyPoints: data.loyalty_points }; 
-    } catch (err) { return { id, name: 'Customer', phone: '', totalOrders: 0, lifetimeSpend: 0, favoriteItemsCount: 0 }; } 
+        const { data: profile, error: profileErr } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', id)
+            .single(); 
+
+        if (profileErr || !profile) throw new Error("Profile not found"); 
+
+        // Actual aggregation from database
+        const [
+            { count: totalOrders },
+            { data: ordersData },
+            { count: favoritesCount }
+        ] = await Promise.all([
+            supabase.from('orders').select('*', { count: 'exact', head: true }).eq('student_id', id).neq('status', 'cancelled'),
+            supabase.from('orders').select('total_amount').eq('student_id', id).neq('status', 'cancelled'),
+            supabase.from('favorites').select('*', { count: 'exact', head: true }).eq('student_id', id)
+        ]);
+
+        const lifetimeSpend = (ordersData || []).reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+
+        return { 
+            id: profile.id, 
+            name: profile.username, 
+            phone: profile.phone || '', 
+            totalOrders: totalOrders || 0, 
+            lifetimeSpend: lifetimeSpend, 
+            favoriteItemsCount: favoritesCount || 0, 
+            loyaltyPoints: profile.loyalty_points || 0 
+        }; 
+    } catch (err) { 
+        console.error("Profile Fetch Error:", err);
+        return { id, name: 'Customer', phone: '', totalOrders: 0, lifetimeSpend: 0, favoriteItemsCount: 0 }; 
+    } 
 };
 
 export const getAllStudentCoupons = async (id: string) => { 

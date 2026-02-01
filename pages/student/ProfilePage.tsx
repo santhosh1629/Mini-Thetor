@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getStudentProfile } from '../../services/mockApi';
@@ -55,10 +54,12 @@ const ProfilePage: React.FC = () => {
         if (!user) return;
         
         try {
+            setMessage('Updating profile...');
             await updateUser({ username: formData.name, phone: formData.phone });
-            if(profile) {
-                setProfile({ ...profile, name: formData.name, phone: formData.phone });
-            }
+            
+            // Re-fetch everything from the server to ensure UI is in sync
+            await fetchProfile();
+            
             setIsEditing(false);
             setMessage('Profile updated successfully!');
             setTimeout(() => setMessage(''), 3000);
@@ -135,7 +136,7 @@ const ProfilePage: React.FC = () => {
                         </div>
                     </div>
                 )}
-                {message && <p className="mt-4 text-center text-sm text-green-400">{message}</p>}
+                {message && <p className={`mt-4 text-center text-sm ${message.includes('success') ? 'text-green-400' : 'text-amber-400'}`}>{message}</p>}
             </div>
         </div>
     );
