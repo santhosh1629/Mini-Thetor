@@ -158,7 +158,7 @@ const CartPage: React.FC = () => {
         }
 
         const options = {
-            key: 'rzp_test_1DP5mmOlF5G5ag', 
+            key: 'rzp_live_S0V6Bz1xXIWsbn', 
             amount: totalAmount * 100, 
             currency: "INR",
             name: "CINEMA CAFE",
