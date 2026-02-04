@@ -17,8 +17,6 @@ const MenuContext = createContext<MenuContextType | null>(null);
 export const MenuProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
 
-  // Optimized: Initialize state directly from cache to avoid "loading" flash on mount.
-  // This ensures the menu appears instantly (0ms) if cached data exists.
   const [menuItems, setMenuItems] = useState<MenuItem[]>(() => {
     const cached = cacheService.get<MenuItem[]>(CACHE_KEYS.MENU);
     return cached || [];
@@ -32,10 +30,7 @@ export const MenuProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      // Fetch fresh data in background
       const data = await getMenu(user?.id);
-      
-      // Update state and cache
       setMenuItems(data);
       cacheService.set(CACHE_KEYS.MENU, data);
     } catch (error) {
@@ -43,19 +38,16 @@ export const MenuProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, menuItems.length]);
 
   useEffect(() => {
-    // We always fetch on mount to check for price updates/availability, 
-    // but the user sees cached data immediately.
     fetchMenu();
   }, [fetchMenu]);
 
-  // Expose a method to update a single item locally without refetching (e.g., toggling favorite)
   const updateMenuItemOptimistic = useCallback((updatedItem: MenuItem) => {
       setMenuItems(prev => {
           const newMenu = prev.map(item => item.id === updatedItem.id ? updatedItem : item);
-          cacheService.set(CACHE_KEYS.MENU, newMenu); // Update cache too
+          cacheService.set(CACHE_KEYS.MENU, newMenu);
           return newMenu;
       });
   }, []);

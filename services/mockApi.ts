@@ -17,6 +17,19 @@ const normalizeCategory = (cat?: string): 'food' | 'game' => {
 
 // --- MAPPING HELPERS ---
 
+const mapMenuItem = (item: any): MenuItem => ({
+    ...item,
+    imageUrl: item.image_url,
+    isAvailable: item.is_available ?? true,
+    isCombo: item.is_combo,
+    comboItems: item.combo_items,
+    slotIds: item.slot_ids,
+    durationMinutes: item.duration_minutes,
+    averageRating: Number(item.average_rating) || 0,
+    favoriteCount: item.favorite_count || 0,
+    category: normalizeCategory(item.category)
+});
+
 const mapOrder = (o: any): Order => ({
     ...o,
     id: o.id,
@@ -169,52 +182,38 @@ export const getMenu = async (studentId?: string): Promise<MenuItem[]> => {
     try { 
         const { data, error } = await supabase
             .from('menu_items')
-            .select('id, name, price, image_url, is_available, category, is_combo, average_rating, favorite_count, emoji')
-            .limit(50)
+            .select('*')
+            .limit(100)
             .order('name', { ascending: true }); 
 
         if (error) throw error; 
         
-        let menu = (data || []).map(item => ({ 
-            ...item, 
-            imageUrl: item.image_url, 
-            isAvailable: item.is_available ?? true,
-            category: normalizeCategory(item.category),
-            averageRating: Number(item.average_rating) || 0
-        })); 
+        let menu = (data || []).map(mapMenuItem); 
 
         if (studentId && menu.length > 0) { 
             const { data: favs } = await supabase.from('favorites').select('menu_item_id').eq('student_id', studentId); 
             const favIds = new Set(favs?.map(f => f.menu_item_id) || []); 
             menu = menu.map(item => ({ ...item, isFavorited: favIds.has(item.id) })); 
         } 
-        return menu as MenuItem[]; 
-    } catch (err) { return []; } 
+        return menu; 
+    } catch (err) { 
+        console.error("getMenu error:", err);
+        return []; 
+    } 
 };
 
 export const getMenuItemById = async (itemId: string, studentId?: string): Promise<MenuItem | undefined> => { 
     try { 
         const { data, error } = await supabase.from('menu_items').select('*').eq('id', itemId).single(); 
         if (error) throw error; 
-        const item = { 
-            ...data, 
-            imageUrl: data.image_url, 
-            isCombo: data.is_combo, 
-            comboItems: data.combo_items, 
-            slotIds: data.slot_ids, 
-            durationMinutes: data.duration_minutes, 
-            averageRating: Number(data.average_rating) || 0,
-            favoriteCount: data.favorite_count || 0,
-            isAvailable: data.is_available ?? true,
-            category: normalizeCategory(data.category) 
-        }; 
+        const item = mapMenuItem(data);
         if (studentId) { 
             try { 
                 const { data: fav } = await supabase.from('favorites').select('id').eq('student_id', studentId).eq('menu_item_id', itemId).maybeSingle(); 
                 item.isFavorited = !!fav; 
             } catch (e) {} 
         } 
-        return item as MenuItem; 
+        return item; 
     } catch (err) { return undefined; } 
 };
 
@@ -558,7 +557,6 @@ export const getStudentProfile = async (id: string): Promise<StudentProfile> => 
 
         if (profileErr || !profile) throw new Error("Profile not found"); 
 
-        // Actual aggregation from database
         const [
             { count: totalOrders },
             { data: ordersData },

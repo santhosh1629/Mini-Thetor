@@ -173,7 +173,7 @@ const CartPage: React.FC = () => {
                 contact: phoneNumber,
             },
             theme: {
-                color: "#A78BFA",
+                color: "#D4AF37",
             },
             modal: {
                 ondismiss: () => {

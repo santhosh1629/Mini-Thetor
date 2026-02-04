@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../../services/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
@@ -35,7 +36,8 @@ const processAndCompressImage = (file: File): Promise<string> => {
             img.src = event.target?.result as string;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 800;
+                // Ultra-aggressive compression for maximum compatibility
+                const MAX_WIDTH = 240;
 
                 if (img.width > MAX_WIDTH) {
                     const scaleSize = MAX_WIDTH / img.width;
@@ -50,7 +52,8 @@ const processAndCompressImage = (file: File): Promise<string> => {
                 if (!ctx) return reject(new Error('Canvas context failed'));
 
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.85); 
+                // Reduced quality to 0.4 for very small base64 strings
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.4); 
                 resolve(dataUrl);
             };
             img.onerror = reject;
